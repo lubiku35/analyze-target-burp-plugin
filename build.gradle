@@ -1,0 +1,39 @@
+plugins {
+    id 'java'
+    id 'com.gradleup.shadow' version '8.3.5'
+}
+
+group = 'com.analyzer'
+version = '0.3.0'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Burp Montoya API - provided by Burp at runtime, only needed for compilation
+    compileOnly 'net.portswigger.burp.extensions:montoya-api:2026.2'
+}
+
+shadowJar {
+    archiveBaseName = 'analyze-target'
+    archiveClassifier = ''
+    archiveVersion = project.version
+    // Burp provides the Montoya API at runtime, so nothing third-party is bundled today,
+    // but shadow makes it trivial to add libraries later without polluting Burp's classloader.
+    mergeServiceFiles()
+}
+
+tasks.named('jar') {
+    enabled = false
+}
+
+tasks.named('build') {
+    dependsOn tasks.named('shadowJar')
+}
