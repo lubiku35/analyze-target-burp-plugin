@@ -19,6 +19,7 @@ import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
@@ -54,6 +55,7 @@ public class AnalyzerTab extends JPanel {
     private final TargetPanel targetPanel;
     private final JTabbedPane outer;
     private final JLabel statusLabel = new JLabel(" ");
+    private final JProgressBar progressBar = new JProgressBar();
     private final JTable table;
     private final int findingsTabIndex;
     private final int targetTabIndex;
@@ -124,6 +126,12 @@ public class AnalyzerTab extends JPanel {
         statusLabel.setFont(statusLabel.getFont().deriveFont(Font.PLAIN, 11f));
         statusLabel.setText("Idle. Right-click any request → Extensions → Send to Analyze Target.");
         status.add(statusLabel, BorderLayout.WEST);
+
+        progressBar.setStringPainted(true);
+        progressBar.setPreferredSize(new Dimension(220, 16));
+        progressBar.setVisible(false);
+        status.add(progressBar, BorderLayout.EAST);
+
         findingsPane.add(status, BorderLayout.SOUTH);
 
         // ---- Outer tab container: Target | Findings | HTTP traffic | About ----
@@ -219,7 +227,7 @@ public class AnalyzerTab extends JPanel {
     // Public API for the context menu and engine
     // ============================================================================================
 
-    /** Called from the right-click context menu. Loads the request — does not run. */
+    /** Called from the right-click context menu. Loads the request - does not run. */
     public void loadTarget(HttpRequest req, HttpResponse resp) {
         targetPanel.loadTarget(req, resp);
         setStatus("Loaded target. Switch to the Target tab and click Run analysis.");
@@ -240,16 +248,38 @@ public class AnalyzerTab extends JPanel {
     // ============================================================================================
 
     private void startAnalysis(HttpRequest req, HttpResponse resp) {
-        setStatus("Analyzing " + req.url() + " — running checks…");
+        boolean passiveOnly = targetPanel.isPassiveOnly();
+        setStatus("Analyzing " + req.url() + (passiveOnly ? " (passive only)" : "") + " - running checks…");
         // Auto-switch to Findings so the user sees results coming in.
-        SwingUtilities.invokeLater(() -> outer.setSelectedIndex(findingsTabIndex));
+        SwingUtilities.invokeLater(() -> {
+            outer.setSelectedIndex(findingsTabIndex);
+            progressBar.setVisible(true);
+            progressBar.setIndeterminate(true);
+            progressBar.setString("starting…");
+        });
 
-        engine.analyze(req, resp,
+        engine.analyze(req, resp, passiveOnly,
                 this::addFinding,
+                this::setProgress,
                 () -> {
                     setStatus("Analysis complete for " + req.url() + ".");
+                    SwingUtilities.invokeLater(() -> {
+                        progressBar.setIndeterminate(false);
+                        if (progressBar.getMaximum() > 0) progressBar.setValue(progressBar.getMaximum());
+                        progressBar.setString("complete");
+                    });
                     targetPanel.onAnalysisComplete();
                 });
+    }
+
+    private void setProgress(AnalysisEngine.Progress p) {
+        SwingUtilities.invokeLater(() -> {
+            progressBar.setVisible(true);
+            progressBar.setIndeterminate(false);
+            progressBar.setMaximum(p.total());
+            progressBar.setValue(p.completed());
+            progressBar.setString(p.completed() + " / " + p.total() + " checks");
+        });
     }
 
     private void onClearFindings(ActionEvent e) {

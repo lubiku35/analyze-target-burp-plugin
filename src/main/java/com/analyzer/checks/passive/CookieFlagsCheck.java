@@ -84,11 +84,11 @@ public class CookieFlagsCheck implements Check {
                                 + "JavaScript (including XSS payloads) can read the cookie via `document.cookie` and exfiltrate it. "
                                 + "Without `SameSite`, the cookie is sent on cross-origin requests, enabling CSRF (the modern "
                                 + "browser default is `Lax` but legacy browsers and older Chrome versions still default to none). "
-                                + "Violating `__Host-` / `__Secure-` prefix invariants makes the prefix meaningless — browsers "
+                                + "Violating `__Host-` / `__Secure-` prefix invariants makes the prefix meaningless - browsers "
                                 + "will accept the cookie but the safety guarantees you expected won't apply.")
                         .remediation("Set Secure, HttpOnly (for cookies not read by JS), and SameSite=Lax or Strict. "
                                 + "For high-value session cookies prefer the `__Host-` prefix with Path=/, no Domain attribute, "
-                                + "and Secure — this binds the cookie to exactly the origin that set it, preventing subdomain "
+                                + "and Secure - this binds the cookie to exactly the origin that set it, preventing subdomain "
                                 + "injection. If you need a cookie shared across subdomains, use `__Secure-` instead (drops "
                                 + "the Path=/ and no-Domain requirements). For SameSite=None (cross-site usage like OAuth "
                                 + "iframes), Secure is mandatory or modern browsers reject the cookie outright.")

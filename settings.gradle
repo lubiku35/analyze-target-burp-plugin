@@ -1,9 +1,9 @@
 // Lets Gradle auto-download a matching JDK if the local machine doesn't have one.
 // Without this plugin, the java toolchain block in build.gradle can only *find* JDKs,
-// not fetch them — which is what the "Toolchain download repositories have not been
+// not fetch them - which is what the "Toolchain download repositories have not been
 // configured" error from `gradle shadowJar` means.
 plugins {
-    // 0.10.0+ is required for Gradle 9.x — earlier versions reference JvmVendorSpec
+    // 0.10.0+ is required for Gradle 9.x - earlier versions reference JvmVendorSpec
     // constants (e.g. IBM_SEMERU) that Gradle 9 removed.
     id 'org.gradle.toolchains.foojay-resolver-convention' version '0.10.0'
 }

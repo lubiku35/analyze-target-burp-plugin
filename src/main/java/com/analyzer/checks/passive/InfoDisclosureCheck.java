@@ -53,7 +53,7 @@ public class InfoDisclosureCheck implements Check {
             }
         }
 
-        // Verbose error patterns in body — cap scan to 1 MiB to bound CPU on huge responses
+        // Verbose error patterns in body - cap scan to 1 MiB to bound CPU on huge responses
         String body = resp.bodyToString();
         if (body != null) {
             if (body.length() > 1_048_576) body = body.substring(0, 1_048_576);

@@ -50,7 +50,7 @@ public final class AnalysisEngine {
 
     private static List<Check> defaultChecks() {
         List<Check> list = new ArrayList<>();
-        // Passive — read-only of the seed response (TechFingerprintCheck is borderline; it may fetch /)
+        // Passive - read-only of the seed response (TechFingerprintCheck is borderline; it may fetch /)
         list.add(new TechFingerprintCheck());
         list.add(new SecurityHeadersCheck());
         list.add(new CookieFlagsCheck());
@@ -59,17 +59,20 @@ public final class AnalysisEngine {
         list.add(new FormSecurityCheck());
         list.add(new RobotsSitemapCheck());
         list.add(new JavaScriptGrepCheck());
-        // Active — additional traffic
+        // Active - additional traffic
         list.add(new HostHeaderCheck());
         list.add(new CorsCheck());
         list.add(new HttpMethodsCheck());
         list.add(new SensitivePathsCheck());
-        // TLS — connects directly to host:443 with the local JDK
+        // TLS - connects directly to host:443 with the local JDK
         list.add(new TlsCheck());
         return list;
     }
 
     public List<Check> checks() { return List.copyOf(checks); }
+
+    /** Progress snapshot emitted as each check finishes. */
+    public record Progress(int completed, int total, String checkId) {}
 
     /**
      * Run all checks against the given seed request. The onFinding callback may be invoked from
@@ -77,24 +80,33 @@ public final class AnalysisEngine {
      */
     /** Per-check hard timeout. A single slow check should never stall the whole run. */
     private static final long PER_CHECK_TIMEOUT_SECONDS = 60;
-    /** Overall hard ceiling — `shutdownNow` after this. Stragglers get logged but the run completes. */
+    /** Overall hard ceiling - `shutdownNow` after this. Stragglers get logged but the run completes. */
     private static final long OVERALL_TIMEOUT_SECONDS   = 180;
 
     public void analyze(HttpRequest seedRequest,
                         HttpResponse seedResponse,
+                        boolean passiveOnly,
                         Consumer<Finding> onFinding,
+                        Consumer<Progress> onProgress,
                         Runnable onComplete) {
+        // Passive-only mode runs just the read-only checks (no extra HTTP traffic, no TLS connect).
+        List<Check> selected = passiveOnly
+                ? checks.stream().filter(c -> !c.isActive()).toList()
+                : checks;
+        final int total = selected.size();
+        AtomicInteger completed = new AtomicInteger();
+
         ExecutorService pool = Executors.newFixedThreadPool(
-                Math.min(8, Math.max(2, checks.size())),
+                Math.min(8, Math.max(2, total)),
                 namedDaemonThreadFactory("analyze-target-worker"));
 
-        // After onComplete fires, slow stragglers may still emit findings — gate them out
+        // After onComplete fires, slow stragglers may still emit findings - gate them out
         // so they don't land in a UI table the user just cleared.
         AtomicBoolean done = new AtomicBoolean(false);
 
         List<CompletableFuture<Void>> futures = new ArrayList<>();
         try {
-            for (Check check : checks) {
+            for (Check check : selected) {
                 AnalysisContext ctx = new AnalysisContext(api, seedRequest, seedResponse, check.id(), trafficLog);
                 CompletableFuture<Void> f = CompletableFuture.runAsync(() -> {
                     try {
@@ -116,6 +128,11 @@ public final class AnalysisEngine {
                                         + " exceeded " + PER_CHECK_TIMEOUT_SECONDS + "s timeout");
                             }
                             return null;
+                        })
+                        .whenComplete((v, t) -> {
+                            if (onProgress != null) {
+                                onProgress.accept(new Progress(completed.incrementAndGet(), total, check.id()));
+                            }
                         });
                 futures.add(f);
             }

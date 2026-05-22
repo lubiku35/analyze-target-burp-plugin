@@ -30,7 +30,7 @@ import java.util.Set;
  * and record what the server negotiated; we also pull the leaf certificate to check validity window
  * and SAN/CN match against the target hostname.
  *
- * Trade-off: this is intentionally less thorough than testssl.sh — it only sees what the local JDK
+ * Trade-off: this is intentionally less thorough than testssl.sh - it only sees what the local JDK
  * is willing to offer. It will not enumerate weak ciphers the JDK has removed. For a definitive
  * cipher audit, run testssl.sh out-of-band.
  */
@@ -88,7 +88,7 @@ public class TlsCheck implements Check {
                     }
                 }
             } catch (Exception ignored) {
-                // protocol not supported on this JDK or server rejected — that's the signal we want
+                // protocol not supported on this JDK or server rejected - that's the signal we want
             }
         }
 

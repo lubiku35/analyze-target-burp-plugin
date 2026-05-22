@@ -15,10 +15,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * WSTG-SESS / WSTG-CONF — Form security passive review.
+ * WSTG-SESS / WSTG-CONF - Form security passive review.
  *
  * Looks at every <form> in the seed response and flags:
- *  - password fields without autocomplete=off (low — modern guidance varies)
+ *  - password fields without autocomplete=off (low - modern guidance varies)
  *  - login forms submitted over http:// while the page is https:// (mixed-content downgrade)
  *  - forms with method=POST that have no obvious anti-CSRF token field
  *  - forms posting to a different origin
@@ -127,8 +127,8 @@ public class FormSecurityCheck implements Check {
                                 .severity(Severity.INFO)
                                 .confidence(Confidence.FIRM)
                                 .url(ctx.targetUrl())
-                                .description("A password input has no autocomplete directive. Modern guidance is mixed — managers "
-                                        + "ignore the hint anyway — but on shared/kiosk devices browser-cached passwords are a residual risk.")
+                                .description("A password input has no autocomplete directive. Modern guidance is mixed - managers "
+                                        + "ignore the hint anyway - but on shared/kiosk devices browser-cached passwords are a residual risk.")
                                 .remediation("If the form is on a shared-device portal or sensitive admin login, set "
                                         + "`autocomplete=\"new-password\"` (signup) or `\"off\"` (other). Otherwise leave it.")
                                 .evidence(HttpUtil.truncate(tag, 200))

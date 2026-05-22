@@ -128,7 +128,7 @@ public class JavaScriptGrepCheck implements Check {
                         .confidence(Confidence.TENTATIVE)
                         .url(url)
                         .description("Regex for `" + e.getKey() + "` matched content served by the application. "
-                                + "Manual verification recommended — many matches are false positives (test fixtures, "
+                                + "Manual verification recommended - many matches are false positives (test fixtures, "
                                 + "public keys, library samples).")
                         .remediation("If genuine, rotate the credential immediately, remove it from client-side code, "
                                 + "and audit access logs for misuse.")
@@ -152,7 +152,7 @@ public class JavaScriptGrepCheck implements Check {
                     .url(url)
                     .description("JavaScript references " + endpoints.size() + " API-like paths. "
                             + "Inventory them for additional attack surface (auth requirements, IDOR, mass assignment).")
-                    .remediation("N/A — informational. Review each endpoint for proper authentication and authorisation.")
+                    .remediation("N/A - informational. Review each endpoint for proper authentication and authorisation.")
                     .evidence("Source: " + source + "\n" + String.join("\n", endpoints))
                     .requestSnippet(reqSnip)
                     .responseSnippet(respSnip)

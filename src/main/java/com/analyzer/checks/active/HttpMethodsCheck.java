@@ -52,8 +52,8 @@ public class HttpMethodsCheck implements Check {
                             .confidence(Confidence.CERTAIN)
                             .url(ctx.targetUrl())
                             .description("Server advertised allowed methods on OPTIONS. " +
-                                    (risky ? "List includes one of TRACE/PUT/DELETE/CONNECT/PATCH — verify each is intentionally exposed."
-                                            : "Informational — confirm each is intentionally exposed."))
+                                    (risky ? "List includes one of TRACE/PUT/DELETE/CONNECT/PATCH - verify each is intentionally exposed."
+                                            : "Informational - confirm each is intentionally exposed."))
                             .remediation("Disable methods the application does not need at the web server / framework layer. "
                                     + "Prefer explicit per-route method allow-lists over global enablement.")
                             .evidence(reported)

@@ -45,7 +45,7 @@ public class CorsCheck implements Check {
         String nullOrigin  = "null";
         String suffixBypass = "https://" + host + ".attacker.test";   // target.com.attacker.test
         // Prefix-bypass: use a reserved-TLD host. Constructing `attackertarget.com` from a real
-        // target risks the canary colliding with a registered domain — `.test` is reserved by RFC 6761.
+        // target risks the canary colliding with a registered domain - `.test` is reserved by RFC 6761.
         String prefixBypass = "https://attacker-" + host.replace('.', '-') + ".prefix.analyze-target.test";
 
         probe(ctx, seed.withRemovedHeader("Origin").withAddedHeader("Origin", reflective),
@@ -104,7 +104,7 @@ public class CorsCheck implements Check {
                         .confidence(Confidence.CERTAIN)
                         .url(ctx.targetUrl())
                         .description("Server returns `Access-Control-Allow-Origin: *` together with `Access-Control-Allow-Credentials: true`. "
-                                + "Browsers reject this combo, but it usually indicates the underlying CORS code is broken — under other "
+                                + "Browsers reject this combo, but it usually indicates the underlying CORS code is broken - under other "
                                 + "code paths it may reflect the Origin instead.")
                         .remediation("Pick one: either drop credentials and keep the wildcard, or list specific allowed origins. Never both.")
                         .evidence("Access-Control-Allow-Origin: *\nAccess-Control-Allow-Credentials: true")

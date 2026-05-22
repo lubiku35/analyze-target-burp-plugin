@@ -16,7 +16,7 @@ import java.util.Optional;
 
 /**
  * Adds a "Send to Analyze Target" entry under Extensions in the right-click menu. Clicking it
- * loads the selected request into the Target tab — it does NOT auto-run. The user clicks
+ * loads the selected request into the Target tab - it does NOT auto-run. The user clicks
  * "Run analysis" on the Target tab when ready.
  */
 public class AnalyzeContextMenuProvider implements ContextMenuItemsProvider {

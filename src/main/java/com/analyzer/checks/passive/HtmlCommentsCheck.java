@@ -16,7 +16,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * WSTG-INFO-05 — Review webpage content for information leakage.
+ * WSTG-INFO-05 - Review webpage content for information leakage.
  *
  * Extracts HTML/JS comments and flags suspicious ones: TODO/FIXME notes,
  * embedded credentials, internal IPs/hostnames, debug flags.
@@ -92,7 +92,7 @@ public class HtmlCommentsCheck implements Check {
                     .severity(Severity.LOW)
                     .confidence(Confidence.FIRM)
                     .url(ctx.targetUrl())
-                    .description("RFC1918 / loopback IP addresses appear in the response — typically inside comments or JS strings. "
+                    .description("RFC1918 / loopback IP addresses appear in the response - typically inside comments or JS strings. "
                             + "These reveal internal network topology.")
                     .remediation("Replace internal IPs/hostnames in production assets with env-driven config; strip dev artefacts at build time.")
                     .evidence(String.join("\n", internals))

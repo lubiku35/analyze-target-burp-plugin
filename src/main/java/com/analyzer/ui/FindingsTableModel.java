@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Findings table model. All mutations and reads must happen on the EDT — addFinding/clear
+ * Findings table model. All mutations and reads must happen on the EDT - addFinding/clear
  * schedule their work via SwingUtilities.invokeLater. Worker threads call addFinding directly.
  */
 public class FindingsTableModel extends AbstractTableModel {

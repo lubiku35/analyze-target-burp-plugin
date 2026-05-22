@@ -59,7 +59,7 @@ public class SecurityHeadersCheck implements Check {
                     .description("The response does not set a Content-Security-Policy header. CSP is the primary defence-in-depth "
                             + "control against XSS, clickjacking, data-exfiltration via injected resources, and protocol/scheme "
                             + "downgrades. Without it, a single unfiltered input that reaches the DOM can execute attacker-controlled "
-                            + "JavaScript in the user's authenticated session — read tokens, perform actions, exfiltrate data. "
+                            + "JavaScript in the user's authenticated session - read tokens, perform actions, exfiltrate data. "
                             + "Modern browsers do not impose any default restriction in CSP's absence; the application is fully "
                             + "exposed to whatever script it accidentally renders. CSP is also the only header that lets you "
                             + "block plugin loading (Flash/Java applets) and restrict the URLs that forms may POST to.")
@@ -67,7 +67,7 @@ public class SecurityHeadersCheck implements Check {
                             + "`default-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; "
                             + "form-action 'self'` and loosen per-directive only as needed. Use the Report-Only variant "
                             + "first to gather violations without breaking the site, then enforce. For inline scripts you "
-                            + "cannot remove, use nonces (`'nonce-<random>'`) or hashes — never `'unsafe-inline'`.")
+                            + "cannot remove, use nonces (`'nonce-<random>'`) or hashes - never `'unsafe-inline'`.")
                     .references(List.of(
                             "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy",
                             "https://owasp.org/www-project-secure-headers/",
@@ -136,12 +136,12 @@ public class SecurityHeadersCheck implements Check {
                     .description("HTTPS response does not set Strict-Transport-Security, so an active network attacker (rogue WiFi, "
                             + "compromised router, malicious CA) can downgrade subsequent navigations to plaintext HTTP and "
                             + "intercept credentials, session cookies, and form submissions. The first visit is always "
-                            + "vulnerable (no HSTS state to enforce) — only the HSTS preload list closes that gap, which "
+                            + "vulnerable (no HSTS state to enforce) - only the HSTS preload list closes that gap, which "
                             + "requires this header with the `preload` directive. This is especially important on login, "
                             + "password-reset, and OAuth endpoints where credentials travel in clear after a downgrade.")
                     .remediation("Add `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload` to all "
                             + "HTTPS responses (or set it once at the CDN/load-balancer layer). Before enabling `preload`, "
-                            + "verify every subdomain supports HTTPS — preloading is effectively irreversible "
+                            + "verify every subdomain supports HTTPS - preloading is effectively irreversible "
                             + "(removal can take 6-12 months). After deploying, submit to https://hstspreload.org/.")
                     .references(List.of("https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security",
                             "https://hstspreload.org/"))
@@ -170,7 +170,7 @@ public class SecurityHeadersCheck implements Check {
                             + "Missing `preload` plus absence from the preload list means first-visit MITM is still possible.")
                     .remediation("Use `max-age=63072000; includeSubDomains; preload` (2 years). Submit the apex domain "
                             + "to hstspreload.org. If you cannot serve every subdomain over HTTPS, drop includeSubDomains "
-                            + "until you can — but the wider gap is worse than fixing the subdomain.")
+                            + "until you can - but the wider gap is worse than fixing the subdomain.")
                     .evidence("Strict-Transport-Security: " + hsts)
                     .references(List.of("https://hstspreload.org/"))
                     .request(req)
@@ -207,7 +207,7 @@ public class SecurityHeadersCheck implements Check {
                     .url(url)
                     .description("Without `X-Content-Type-Options: nosniff`, browsers may MIME-sniff responses and execute content "
                             + "the server did not intend to serve as such. Classic attack: a file-upload endpoint that returns a "
-                            + "user-uploaded text/plain file — without nosniff, IE/Edge (and historically Firefox) may sniff "
+                            + "user-uploaded text/plain file - without nosniff, IE/Edge (and historically Firefox) may sniff "
                             + "embedded `<script>` tags and execute them in the origin's context. Same risk for served-as-JSON "
                             + "endpoints when an attacker controls the first few bytes of the response.")
                     .remediation("Set `X-Content-Type-Options: nosniff` on every response. There is no downside; "
@@ -234,13 +234,13 @@ public class SecurityHeadersCheck implements Check {
                     .url(url)
                     .description("Neither X-Frame-Options nor `frame-ancestors` in CSP is set, so any attacker page can embed this "
                             + "page in an iframe. Combined with CSS opacity tricks, this enables clickjacking: the victim sees "
-                            + "an attacker's UI but their clicks land on the framed page — e.g. clicking 'Delete Account', "
+                            + "an attacker's UI but their clicks land on the framed page - e.g. clicking 'Delete Account', "
                             + "approving an OAuth consent, or transferring funds. Particularly dangerous on state-changing "
                             + "endpoints (settings, payment confirmation, admin actions). frame-ancestors in CSP takes "
                             + "precedence over X-Frame-Options where both are set; CSP supports a list of allowed framing "
                             + "origins, X-Frame-Options does not.")
                     .remediation("Add `Content-Security-Policy: frame-ancestors 'none'` (or `'self'` if you have a legitimate "
-                            + "in-app embedder). Optionally also `X-Frame-Options: DENY` for older browsers. Apply globally — "
+                            + "in-app embedder). Optionally also `X-Frame-Options: DENY` for older browsers. Apply globally - "
                             + "the cost of accidentally framing a page you intended to allow is much lower than the cost of "
                             + "missing a state-changing endpoint.")
                     .references(List.of(
@@ -260,7 +260,7 @@ public class SecurityHeadersCheck implements Check {
                         .url(url)
                         .description("X-Frame-Options value '" + xfo + "' is not recognised by browsers, which will ignore it "
                                 + "entirely. Common mistake: comma-separated origins (e.g. `ALLOW-FROM https://a.com, https://b.com`) "
-                                + "— XFO only accepts DENY, SAMEORIGIN, or a single ALLOW-FROM URL. For multiple allowed framers, "
+                                + "- XFO only accepts DENY, SAMEORIGIN, or a single ALLOW-FROM URL. For multiple allowed framers, "
                                 + "use CSP `frame-ancestors`.")
                         .remediation("Use `DENY` or `SAMEORIGIN`. For fine-grained control over framing origins, "
                                 + "switch to `Content-Security-Policy: frame-ancestors <list>`.")
@@ -285,9 +285,9 @@ public class SecurityHeadersCheck implements Check {
                     .description("Without an explicit Referrer-Policy, browsers fall back to `strict-origin-when-cross-origin` "
                             + "on most modern engines but older browsers default to leaking the full URL. The risk: URLs that "
                             + "contain secrets in query strings (password-reset tokens, OAuth `code` params, signed S3 URLs, "
-                            + "API keys) are sent verbatim to every cross-origin resource — analytics, CDN-hosted fonts, "
-                            + "third-party scripts — and end up in their access logs. This is how OAuth tokens routinely leak.")
-                    .remediation("Set `Referrer-Policy: strict-origin-when-cross-origin` (the modern default — explicit is better) "
+                            + "API keys) are sent verbatim to every cross-origin resource - analytics, CDN-hosted fonts, "
+                            + "third-party scripts - and end up in their access logs. This is how OAuth tokens routinely leak.")
+                    .remediation("Set `Referrer-Policy: strict-origin-when-cross-origin` (the modern default - explicit is better) "
                             + "or `no-referrer` for maximum privacy. Combine with placing secrets in POST bodies or "
                             + "Authorization headers, never in URLs.")
                     .references(List.of("https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referrer-Policy"))
@@ -322,7 +322,7 @@ public class SecurityHeadersCheck implements Check {
                     .severity(Severity.INFO)
                     .confidence(Confidence.CERTAIN)
                     .url(url)
-                    .description("Permissions-Policy disables powerful browser features the application doesn't use — camera, "
+                    .description("Permissions-Policy disables powerful browser features the application doesn't use - camera, "
                             + "microphone, geolocation, payment, USB, FLoC/topics, etc. Absence isn't itself exploitable, but "
                             + "if XSS happens later, the attacker payload gains access to whatever defaults the user's browser "
                             + "permits. Most apps need none of these capabilities; disabling them reduces blast radius for "
@@ -358,7 +358,7 @@ public class SecurityHeadersCheck implements Check {
                             + "which mitigates Spectre-class side-channel leaks (cross-origin SharedArrayBuffer reads), "
                             + "tames `window.opener` access (a phishing primitive), and bounds resource embedding. Most "
                             + "exploitable on apps that handle sensitive data and load third-party content (auth pages, "
-                            + "admin consoles). COOP `same-origin` is the most impactful — it closes the tab-handle leak "
+                            + "admin consoles). COOP `same-origin` is the most impactful - it closes the tab-handle leak "
                             + "that lets a popup-spawning attacker page read the opener's URL.")
                     .remediation("Add `Cross-Origin-Opener-Policy: same-origin`, `Cross-Origin-Embedder-Policy: require-corp`, "
                             + "and `Cross-Origin-Resource-Policy: same-origin` (loosen per-resource as needed). Some "

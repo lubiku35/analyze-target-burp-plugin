@@ -7,8 +7,8 @@ import java.awt.Color;
 
 /**
  * Theme-aware colour palette. We try a few signals in order:
- *   1. {@code api.userInterface().currentTheme().name()} — defensively, so unknown enum names don't crash.
- *   2. Swing's {@code Panel.background} brightness — works even if Burp hasn't set its theme on us yet.
+ *   1. {@code api.userInterface().currentTheme().name()} - defensively, so unknown enum names don't crash.
+ *   2. Swing's {@code Panel.background} brightness - works even if Burp hasn't set its theme on us yet.
  *
  * Severity colours are tuned for AA contrast against both backgrounds.
  */
@@ -76,7 +76,7 @@ public final class Palette {
             Object theme = api.userInterface().currentTheme();
             if (theme != null) isDark = theme.toString().toUpperCase().contains("DARK");
         } catch (Throwable ignored) {
-            // older API or unexpected runtime — fall through
+            // older API or unexpected runtime - fall through
         }
         if (isDark == null) {
             // Fall back to Swing's reported panel background brightness.

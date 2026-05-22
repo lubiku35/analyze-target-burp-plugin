@@ -39,7 +39,7 @@ public final class HtmlReportWriter {
           .append("<title>Analyze Target Report</title>")
           .append("<style>").append(css()).append("</style></head><body>");
 
-        sb.append("<header><h1>Analyze Target — Reconnaissance Report</h1>")
+        sb.append("<header><h1>Analyze Target - Reconnaissance Report</h1>")
           .append("<p class='gen'>Generated ")
           .append(escape(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z")
                   .format(ZonedDateTime.now(ZoneId.systemDefault()))))
@@ -64,7 +64,7 @@ public final class HtmlReportWriter {
         int idx = 0;
         for (String url : byUrl.keySet()) {
             sb.append("<li><a href='#t").append(idx++).append("'>")
-              .append(escape(url)).append("</a> — ")
+              .append(escape(url)).append("</a> - ")
               .append(byUrl.get(url).size()).append(" finding(s)</li>");
         }
         sb.append("</ul></section>");
@@ -121,7 +121,7 @@ public final class HtmlReportWriter {
                       .append("' rel='noopener' target='_blank'>")
                       .append(escape(r)).append("</a></li>");
                 } else {
-                    // Don't render as a link if the scheme isn't http(s) — could be javascript: / data:
+                    // Don't render as a link if the scheme isn't http(s) - could be javascript: / data:
                     sb.append("<li>").append(escape(r)).append("</li>");
                 }
             }

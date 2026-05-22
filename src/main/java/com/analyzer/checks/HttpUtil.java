@@ -37,7 +37,7 @@ public final class HttpUtil {
     }
 
     /**
-     * Truncate long text for display in evidence lines (not for request/response bodies — those
+     * Truncate long text for display in evidence lines (not for request/response bodies - those
      * are preserved in full via {@link #requestSnippet}/{@link #responseSnippet}).
      */
     public static String truncate(String s, int max) {
@@ -85,7 +85,7 @@ public final class HttpUtil {
 
     /**
      * Back-compat overload: ignores the body-cap parameter and returns the full response.
-     * Existing call sites that passed `0` (headers-only) still work but now also include the body —
+     * Existing call sites that passed `0` (headers-only) still work but now also include the body -
      * since callers typically build the finding via {@code .response(resp)} which also auto-populates
      * the snippet, the explicit overload mainly survives for stray imports.
      * @deprecated use {@link #responseSnippet(HttpResponse)} or attach the response via
@@ -96,7 +96,7 @@ public final class HttpUtil {
         return responseSnippet(resp);
     }
 
-    /** Headers-only variant — useful for checks whose evidence is in the headers, not the body. */
+    /** Headers-only variant - useful for checks whose evidence is in the headers, not the body. */
     public static String responseHeadersOnly(HttpResponse resp) {
         if (resp == null) return "";
         StringBuilder sb = new StringBuilder();

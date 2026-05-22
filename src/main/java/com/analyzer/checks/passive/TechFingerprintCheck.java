@@ -18,7 +18,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * WSTG-INFO-02/08/09 — fingerprint web server, application platform, and frontend tech from
+ * WSTG-INFO-02/08/09 - fingerprint web server, application platform, and frontend tech from
  * what is observable in the seed response. Always informational; helps the operator pick the
  * right next-step exploits.
  */
@@ -51,6 +51,36 @@ public class TechFingerprintCheck implements Check {
         HEADER_HINTS.put("x-vercel-id", "Vercel");
         HEADER_HINTS.put("x-vercel-cache", "Vercel");
         HEADER_HINTS.put("server-timing", "Server-Timing diagnostics (may leak backend names)");
+        // Cloud / load balancers
+        HEADER_HINTS.put("x-azure-ref", "Azure Front Door / CDN");
+        HEADER_HINTS.put("x-msedge-ref", "Azure CDN (Microsoft)");
+        HEADER_HINTS.put("x-amz-request-id", "AWS S3 / service");
+        HEADER_HINTS.put("x-amzn-requestid", "AWS API Gateway / Lambda");
+        HEADER_HINTS.put("x-amzn-trace-id", "AWS ALB / X-Ray");
+        HEADER_HINTS.put("x-amz-apigw-id", "AWS API Gateway");
+        HEADER_HINTS.put("x-cloud-trace-context", "Google Cloud (GCP)");
+        HEADER_HINTS.put("x-goog-generation", "Google Cloud Storage");
+        HEADER_HINTS.put("x-nf-request-id", "Netlify");
+        HEADER_HINTS.put("x-render-origin-server", "Render");
+        HEADER_HINTS.put("fly-request-id", "Fly.io");
+        // Proxies / gateways / WAF
+        HEADER_HINTS.put("x-envoy-upstream-service-time", "Envoy proxy");
+        HEADER_HINTS.put("x-kong-upstream-latency", "Kong API Gateway");
+        HEADER_HINTS.put("x-kong-proxy-latency", "Kong API Gateway");
+        HEADER_HINTS.put("x-varnish", "Varnish cache");
+        HEADER_HINTS.put("x-proxy-cache", "Nginx proxy cache");
+        HEADER_HINTS.put("x-iinfo", "Imperva Incapsula WAF");
+        HEADER_HINTS.put("x-litespeed-cache", "LiteSpeed server");
+        HEADER_HINTS.put("x-turbo-charged-by", "LiteSpeed server");
+        // Backend / framework leaks
+        HEADER_HINTS.put("x-runtime", "Rails/Rack (X-Runtime timing)");
+        HEADER_HINTS.put("x-rack-cache", "Rack cache (Ruby)");
+        HEADER_HINTS.put("x-redirect-by", "WordPress");
+        HEADER_HINTS.put("x-pingback", "WordPress XML-RPC");
+        HEADER_HINTS.put("x-jenkins", "Jenkins");
+        HEADER_HINTS.put("x-b3-traceid", "Zipkin/B3 distributed tracing");
+        HEADER_HINTS.put("x-github-request-id", "GitHub Pages");
+        HEADER_HINTS.put("x-wix-request-id", "Wix");
     }
 
     /** Cookie name → backend hint. */
@@ -74,6 +104,25 @@ public class TechFingerprintCheck implements Check {
         COOKIE_HINTS.put("cftoken", "ColdFusion");
         COOKIE_HINTS.put("__cfduid", "Cloudflare (legacy)");
         COOKIE_HINTS.put("__cf_bm", "Cloudflare bot management");
+        COOKIE_HINTS.put("ak_bmsc", "Akamai Bot Manager");
+        COOKIE_HINTS.put("bm_sz", "Akamai Bot Manager");
+        COOKIE_HINTS.put("_abck", "Akamai Bot Manager");
+        COOKIE_HINTS.put("awsalb", "AWS Application Load Balancer");
+        COOKIE_HINTS.put("awsalbcors", "AWS Application Load Balancer");
+        COOKIE_HINTS.put("aws-waf-token", "AWS WAF");
+        COOKIE_HINTS.put("arraffinity", "Azure App Service (ARR affinity)");
+        COOKIE_HINTS.put("arraffinitysamesite", "Azure App Service");
+        COOKIE_HINTS.put("wordpress_test_cookie", "WordPress");
+    }
+
+    /** Cookie name prefix -> backend hint (for cookies with dynamic suffixes). */
+    private static final Map<String, String> COOKIE_PREFIX_HINTS = new LinkedHashMap<>();
+    static {
+        COOKIE_PREFIX_HINTS.put("bigipserver", "F5 BIG-IP load balancer");
+        COOKIE_PREFIX_HINTS.put("incap_ses_", "Imperva Incapsula WAF");
+        COOKIE_PREFIX_HINTS.put("visid_incap_", "Imperva Incapsula WAF");
+        COOKIE_PREFIX_HINTS.put("wp-settings-", "WordPress");
+        COOKIE_PREFIX_HINTS.put("wordpress_logged_in_", "WordPress (authenticated session)");
     }
 
     /** HTML pattern → label. Patterns are checked against the first ~32 KB of body. */
@@ -95,6 +144,37 @@ public class TechFingerprintCheck implements Check {
         HTML_HINTS.put("Tailwind",  Pattern.compile("(?i)(tailwindcss|tailwind\\.min\\.css)"));
         HTML_HINTS.put("Django admin", Pattern.compile("(?i)/static/admin/"));
         HTML_HINTS.put("Rails error page", Pattern.compile("(?i)Action Controller|Ruby on Rails"));
+        HTML_HINTS.put("Gatsby",    Pattern.compile("(?i)(id=[\"']___gatsby[\"']|/page-data/)"));
+        HTML_HINTS.put("Remix",     Pattern.compile("(?i)(__remixContext|window\\.__remixManifest)"));
+        HTML_HINTS.put("Astro",     Pattern.compile("(?i)(<astro-island|astro-island )"));
+        HTML_HINTS.put("SvelteKit", Pattern.compile("(?i)(data-sveltekit|__sveltekit)"));
+        HTML_HINTS.put("Ember.js",  Pattern.compile("(?i)(id=[\"']ember[0-9]+[\"']|ember-application)"));
+        HTML_HINTS.put("Alpine.js", Pattern.compile("(?i)(\\sx-data=|alpinejs)"));
+        HTML_HINTS.put("htmx",      Pattern.compile("(?i)(\\shx-(get|post|target)=|htmx(\\.min)?\\.js)"));
+        HTML_HINTS.put("Vite",      Pattern.compile("(?i)(/@vite/client|__vite__)"));
+        HTML_HINTS.put("Webpack",   Pattern.compile("(?i)(webpackJsonp|__webpack_require__)"));
+        HTML_HINTS.put("Wix",       Pattern.compile("(?i)static\\.wixstatic\\.com"));
+        HTML_HINTS.put("Squarespace", Pattern.compile("(?i)static1\\.squarespace\\.com"));
+        HTML_HINTS.put("Webflow",   Pattern.compile("(?i)(data-wf-page|\\.webflow\\.io)"));
+        HTML_HINTS.put("Ghost CMS", Pattern.compile("(?i)content=[\"']Ghost"));
+        HTML_HINTS.put("TYPO3",     Pattern.compile("(?i)/typo3(conf|temp)/"));
+        HTML_HINTS.put("reCAPTCHA", Pattern.compile("(?i)google\\.com/recaptcha"));
+        HTML_HINTS.put("hCaptcha",  Pattern.compile("(?i)\\bhcaptcha\\.com"));
+        HTML_HINTS.put("Cloudflare Turnstile", Pattern.compile("(?i)challenges\\.cloudflare\\.com/turnstile"));
+        HTML_HINTS.put("Stripe.js", Pattern.compile("(?i)js\\.stripe\\.com"));
+    }
+
+    /** Library label -> pattern whose group(1) captures a version string from markup (script/link hrefs). */
+    private static final Map<String, Pattern> LIB_VERSION_HINTS = new LinkedHashMap<>();
+    static {
+        LIB_VERSION_HINTS.put("jQuery",    Pattern.compile("(?i)jquery[.-]([0-9]+\\.[0-9]+(?:\\.[0-9]+)?)"));
+        LIB_VERSION_HINTS.put("jQuery UI", Pattern.compile("(?i)jquery-ui[.-]([0-9]+\\.[0-9]+(?:\\.[0-9]+)?)"));
+        LIB_VERSION_HINTS.put("Bootstrap", Pattern.compile("(?i)bootstrap[.-]([0-9]+\\.[0-9]+(?:\\.[0-9]+)?)"));
+        LIB_VERSION_HINTS.put("AngularJS", Pattern.compile("(?i)angular[.-]([0-9]+\\.[0-9]+(?:\\.[0-9]+)?)"));
+        LIB_VERSION_HINTS.put("Vue.js",    Pattern.compile("(?i)vue[@.-]([0-9]+\\.[0-9]+(?:\\.[0-9]+)?)"));
+        LIB_VERSION_HINTS.put("Lodash",    Pattern.compile("(?i)lodash[@.-]([0-9]+\\.[0-9]+(?:\\.[0-9]+)?)"));
+        LIB_VERSION_HINTS.put("Moment.js", Pattern.compile("(?i)moment[@.-]([0-9]+\\.[0-9]+(?:\\.[0-9]+)?)"));
+        LIB_VERSION_HINTS.put("D3.js",     Pattern.compile("(?i)d3[@.-]v?([0-9]+\\.[0-9]+(?:\\.[0-9]+)?)"));
     }
 
     @Override public String id() { return ID; }
@@ -129,7 +209,16 @@ public class TechFingerprintCheck implements Check {
             if (eq < 0) continue;
             String name = cookieHeader.substring(0, eq).trim().toLowerCase();
             String hint = COOKIE_HINTS.get(name);
-            if (hint != null) hits.add(hint + " (cookie: " + name + ")");
+            if (hint != null) {
+                hits.add(hint + " (cookie: " + name + ")");
+            } else {
+                for (Map.Entry<String, String> p : COOKIE_PREFIX_HINTS.entrySet()) {
+                    if (name.startsWith(p.getKey())) {
+                        hits.add(p.getValue() + " (cookie: " + name + ")");
+                        break;
+                    }
+                }
+            }
         }
 
         // HTML meta generator
@@ -142,6 +231,12 @@ public class TechFingerprintCheck implements Check {
 
             for (Map.Entry<String, Pattern> entry : HTML_HINTS.entrySet()) {
                 if (entry.getValue().matcher(head).find()) hits.add(entry.getKey() + " (HTML pattern)");
+            }
+
+            // Best-effort client-library version extraction from script/link hrefs (e.g. jquery-3.6.0.min.js).
+            for (Map.Entry<String, Pattern> entry : LIB_VERSION_HINTS.entrySet()) {
+                Matcher m = entry.getValue().matcher(head);
+                if (m.find()) hits.add(entry.getKey() + " " + m.group(1) + " (version from markup)");
             }
         }
 

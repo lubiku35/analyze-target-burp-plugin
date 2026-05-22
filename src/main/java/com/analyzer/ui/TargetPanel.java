@@ -10,6 +10,7 @@ import burp.api.montoya.ui.editor.HttpResponseEditor;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSplitPane;
@@ -22,11 +23,11 @@ import java.awt.Font;
 import java.util.function.BiConsumer;
 
 /**
- * "Target" sub-tab — the loaded request/response, with a Run button. Right-click → Send to Analyze
+ * "Target" sub-tab - the loaded request/response, with a Run button. Right-click → Send to Analyze
  * Target loads here but does not run; the user clicks Run when ready.
  *
  * The request editor is editable so the user can tweak the request (add a header, change a parameter)
- * before analysing — the engine receives whatever is in the editor at the moment Run is pressed.
+ * before analysing - the engine receives whatever is in the editor at the moment Run is pressed.
  */
 public class TargetPanel extends JPanel {
     private final MontoyaApi api;
@@ -38,6 +39,7 @@ public class TargetPanel extends JPanel {
     private final JButton runBtn = new JButton("Run analysis");
     private final JButton resetBtn = new JButton("Reset to last loaded");
     private final JButton clearBtn = new JButton("Clear target");
+    private final JCheckBox passiveOnlyBox = new JCheckBox("Passive only");
 
     private HttpRequest originallyLoadedRequest;       // for the Reset button
     private HttpResponse loadedResponse;
@@ -93,6 +95,15 @@ public class TargetPanel extends JPanel {
         bar.add(resetBtn);
         bar.add(Box.createHorizontalStrut(4));
         bar.add(clearBtn);
+        bar.add(Box.createHorizontalStrut(12));
+        passiveOnlyBox.setOpaque(false);
+        passiveOnlyBox.setForeground(palette.foreground);
+        passiveOnlyBox.setToolTipText(
+                "<html>Run only read-only checks that never send extra HTTP traffic.<br>"
+                        + "Skips active probes (CORS, host-header, HTTP methods, sensitive paths),<br>"
+                        + "the TLS connection, and follow-up fetches (JS grep, robots/sitemap).<br>"
+                        + "Safe to use against production without an engagement scope.</html>");
+        bar.add(passiveOnlyBox);
 
         runBtn.addActionListener(e -> doRun());
         resetBtn.addActionListener(e -> resetEditor());
@@ -153,6 +164,11 @@ public class TargetPanel extends JPanel {
         }
         runBtn.setEnabled(false);
         onRun.accept(current, loadedResponse);
+    }
+
+    /** True if the user asked to run read-only checks only (no extra traffic). */
+    public boolean isPassiveOnly() {
+        return passiveOnlyBox.isSelected();
     }
 
     /** Re-enable the Run button when the engine signals completion. */

@@ -18,7 +18,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * WSTG-INFO-03 — Review webserver metafiles.
+ * WSTG-INFO-03 - Review webserver metafiles.
  *
  * Fetches /robots.txt and /sitemap.xml and surfaces interesting paths. Disallow entries
  * often point at admin panels or staging artefacts; sitemap.xml is a free URL inventory.
@@ -61,10 +61,10 @@ public class RobotsSitemapCheck implements Check {
                                 .severity(Severity.INFO)
                                 .confidence(Confidence.CERTAIN)
                                 .url(robotsUrl)
-                                .description("Disallow entries describe paths the operator does not want indexed — often "
+                                .description("Disallow entries describe paths the operator does not want indexed - often "
                                         + "admin areas, staging artefacts, or sensitive endpoints. Review each for "
                                         + "additional attack surface.")
-                                .remediation("N/A — informational. Avoid relying on robots.txt to hide sensitive paths; "
+                                .remediation("N/A - informational. Avoid relying on robots.txt to hide sensitive paths; "
                                         + "use real authentication instead.")
                                 .evidence(("Disallow paths:\n" + String.join("\n", disallowed)
                                         + (sitemapRefs.isEmpty() ? "" : "\n\nSitemap references:\n" + String.join("\n", sitemapRefs)))
@@ -96,7 +96,7 @@ public class RobotsSitemapCheck implements Check {
                                 .confidence(Confidence.CERTAIN)
                                 .url(sitemapUrl)
                                 .description("Sitemap enumerates URLs the operator wants indexed. Useful as a free crawl target list.")
-                                .remediation("N/A — informational.")
+                                .remediation("N/A - informational.")
                                 .evidence(String.join("\n", urls.stream().limit(100).toList())
                                         + (urls.size() > 100 ? "\n… (truncated, " + (urls.size() - 100) + " more)" : ""))
                                 .build());

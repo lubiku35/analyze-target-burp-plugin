@@ -27,7 +27,7 @@ import java.net.URI;
 
 /**
  * Right-hand pane on the Findings tab. Shows the selected finding's metadata, description,
- * remediation, evidence, and the raw request/response — using Burp's native editors when
+ * remediation, evidence, and the raw request/response - using Burp's native editors when
  * available, falling back to plain text otherwise.
  */
 public class FindingDetailPanel extends JPanel {
@@ -146,7 +146,7 @@ public class FindingDetailPanel extends JPanel {
         evidenceArea.setText(f.evidence());
         evidenceArea.setCaretPosition(0);
 
-        // Prefer the original Montoya HttpRequest/HttpResponse refs — Burp's editor renders them
+        // Prefer the original Montoya HttpRequest/HttpResponse refs - Burp's editor renders them
         // in full, with proper highlighting and parser awareness. Only fall back to re-parsing the
         // textual snippet when the finding didn't attach the live objects.
         if (f.httpRequest() != null) {

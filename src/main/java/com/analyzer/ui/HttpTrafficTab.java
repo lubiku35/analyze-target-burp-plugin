@@ -30,7 +30,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * "HTTP traffic" tab — a Burp-history-style table of every HTTP request the plugin sent
+ * "HTTP traffic" tab - a Burp-history-style table of every HTTP request the plugin sent
  * during analysis. Click a row to see the underlying request/response in Burp's native editors.
  */
 public class HttpTrafficTab extends JPanel {

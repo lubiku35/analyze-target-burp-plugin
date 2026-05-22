@@ -6,9 +6,9 @@ Thanks for thinking about contributing. The codebase is small and opinionated; t
 
 Most contributions land in one of three places:
 
-- **New checks** — additional reconnaissance probes (passive or active) under `src/main/java/com/analyzer/checks/`.
-- **New report formats** — alternative output (JSON, Markdown, SARIF) in `src/main/java/com/analyzer/report/`.
-- **UI improvements** — tab refinements, filters, search, exporters in `src/main/java/com/analyzer/ui/`.
+- **New checks** - additional reconnaissance probes (passive or active) under `src/main/java/com/analyzer/checks/`.
+- **New report formats** - alternative output (JSON, Markdown, SARIF) in `src/main/java/com/analyzer/report/`.
+- **UI improvements** - tab refinements, filters, search, exporters in `src/main/java/com/analyzer/ui/`.
 
 For bigger architectural changes (new tracking surfaces, new APIs, etc.), open an issue first to align on the approach.
 
@@ -22,14 +22,14 @@ gradle shadowJar          # build/libs/analyze-target-<version>.jar
 
 Requirements:
 - JDK 17 (Gradle will auto-download via the foojay toolchain resolver if you don't have it).
-- Burp Suite Community or Pro for manual testing — load the JAR via Extensions → Add → Java.
+- Burp Suite Community or Pro for manual testing - load the JAR via Extensions → Add → Java.
 
-## Adding a check — the 60-second version
+## Adding a check - the 60-second version
 
 1. Create a class under `checks/passive/`, `checks/active/`, or `checks/tls/` that implements `Check`.
 2. Implement `id()`, `category()`, `isActive()`, and `run(AnalysisContext)`.
 3. Use `ctx.sendRequest(req)` (not `ctx.api().http().sendRequest`) so the HTTP traffic tab captures your requests.
-4. Return `List<Finding>` — use `Finding.builder()` to construct them.
+4. Return `List<Finding>` - use `Finding.builder()` to construct them.
 5. Append `new YourCheck()` to `AnalysisEngine.defaultChecks()`.
 
 ```java
@@ -63,17 +63,17 @@ public class MyCheck implements Check {
 ## Conventions
 
 - **Java 17 only.** Use records, switch expressions, text blocks, pattern matching freely.
-- **Severities** — use `INFO` for fingerprinting / discovery, `LOW` for hardening gaps with no direct exploit, `MEDIUM` for real misconfigurations, `HIGH` for verified exposure, `CRITICAL` for active exploitation paths.
-- **Confidence** — `CERTAIN` only when a regex / status check unambiguously says yes. Use `FIRM` for high-confidence signals, `TENTATIVE` when manual verification is needed.
-- **No network outside `ctx.sendRequest`** — every HTTP request must flow through it so the traffic tab captures it. The one exception is `TlsCheck`, which connects directly to host:443 because it needs raw `SSLSocket` access.
+- **Severities** - use `INFO` for fingerprinting / discovery, `LOW` for hardening gaps with no direct exploit, `MEDIUM` for real misconfigurations, `HIGH` for verified exposure, `CRITICAL` for active exploitation paths.
+- **Confidence** - `CERTAIN` only when a regex / status check unambiguously says yes. Use `FIRM` for high-confidence signals, `TENTATIVE` when manual verification is needed.
+- **No network outside `ctx.sendRequest`** - every HTTP request must flow through it so the traffic tab captures it. The one exception is `TlsCheck`, which connects directly to host:443 because it needs raw `SSLSocket` access.
 - **Cap body scans.** Anything that runs regex over response bodies must cap at 1 MiB. See `HtmlCommentsCheck` for the pattern.
-- **Honour `Redaction`.** When building snippets, use `HttpUtil.requestSnippet` / `responseSnippet` — they already redact auth headers when the toggle is on.
+- **Honour `Redaction`.** When building snippets, use `HttpUtil.requestSnippet` / `responseSnippet` - they already redact auth headers when the toggle is on.
 
 ## Style
 
 - Imports sorted, no wildcard imports.
 - Public APIs documented; package-private helpers explained inline where non-obvious.
-- Tests not yet enforced — small PRs may skip them; substantial logic should have at least a sanity test.
+- Tests not yet enforced - small PRs may skip them; substantial logic should have at least a sanity test.
 
 ## Pull request flow
 
@@ -97,4 +97,4 @@ Be civil. Disagree on the technical merits. Assume good faith.
 
 ## License
 
-By contributing, you agree your contributions are licensed under the MIT License — see `LICENSE`.
+By contributing, you agree your contributions are licensed under the MIT License - see `LICENSE`.
