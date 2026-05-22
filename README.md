@@ -1,154 +1,111 @@
-# Analyze Target - Burp Suite extension
+# Analyze Target
 
-A right-click "Analyze Target" action for Burp that runs a battery of common web-pentesting recon
-checks against the selected request, presents findings in a theme-aware UI, shows every HTTP
-request the plugin sends in a Burp-history-style traffic tab, and exports a standalone HTML report.
+Hello — and if you're reading this, thanks for taking a look. Pull requests, issues, ideas, and "this thing is busted on my target" reports are all welcome. This is a small project that I'd love to grow into something the wider pentest community finds useful, so jump in.
 
-Built on the modern Burp Montoya API (Java 17). Aligned with OWASP WSTG.
+The goal is simple and hasn't changed: **automate the checks every web pentest and bug-hunting engagement has to do anyway**, the ones that don't depend on knowing anything specific about the application — missing security headers, weak cookie flags, host-header injection, CORS misconfigurations, exposed `.git` and `.env` files, TLS oddities, JavaScript that leaks secrets, and so on. The boring-but-mandatory layer. Get that out of the way in 30 seconds, then spend your time on the interesting stuff that actually requires brain.
 
-![tabs: Findings · HTTP traffic · About]
+It's a Burp Suite extension, written in Java 17 against Burp's modern Montoya API, aligned with the OWASP Web Security Testing Guide.
 
-## Features
+## How it works
 
-- **One-click recon** - right-click any request → Extensions → Analyze Target. Fans out 13 checks
-  in parallel.
-- **Findings tab** - sortable table, severity-coloured badges, click any row for description /
-  remediation / evidence / request / response (in Burp's native editors) / references.
-- **HTTP traffic tab** - every request the plugin sends shows up here in real time: time, check,
-  method, URL, status, length, duration. Click for the underlying request / response in Burp's
-  native editors.
-- **Theme-aware UI** - detects Burp's light/dark theme and adapts colours, padding, and typography.
-  No "kinda oldish" Swing default.
-- **Header redaction** - toggle in the toolbar redacts `Authorization`, `Cookie`, `Set-Cookie`,
-  `X-Api-Key` etc. from all finding snippets and exported reports. ON by default to make client
-  deliverables safe.
-- **Self-contained HTML report** - single-file output grouped by URL, ordered by severity, full
-  evidence + collapsible request/response. Suitable for client deliverables.
-- **Per-check timeouts** - a slow check can't stall the run (60s per check, 180s overall ceiling).
+You point it at one HTTP request. Right-click any request in Proxy, Repeater, or Target → Extensions → **Send to Analyze Target**. The plugin loads that request into its own tab; nothing runs yet. You review it (and edit it if you like — change a header, swap a parameter), then click **Run analysis**.
 
-## Checks
+Behind the scenes, an engine fans out a dozen-ish checks in parallel. Each check is a small Java class that either reads the seed response (passive) or sends some additional crafted requests (active). Findings stream into the **Findings** tab as they appear — severity-coloured, sortable, click any row for the full description, remediation, evidence, and the underlying request/response in Burp's native editor. Every request the plugin itself sends shows up live in the **HTTP traffic** tab so you can see exactly what's going out.
 
-Each check is independently selectable in code (`AnalysisEngine.defaultChecks()`).
+When you're done, **Export HTML report…** dumps a single self-contained file you can send to a client. There's a redaction toggle on by default that scrubs `Authorization`, `Cookie`, `Set-Cookie`, and `X-Api-Key` headers from the report so authenticated-session findings don't leak credentials.
 
-**Passive - read the seed response, no extra traffic** (except JS grep / robots / sitemap)
-
-| Check | What it covers | WSTG |
-|---|---|---|
-| `tech-fingerprint` | Server/X-Powered-By, CDN/WAF (Cloudflare, CloudFront, Fastly, Akamai, Sucuri), backend stack from cookies (PHPSESSID, JSESSIONID, Laravel, Rails, Django, …), HTML meta generator, frontend framework (React, Vue, Angular, Next, Nuxt, Svelte) | INFO-02/08/09 |
-| `headers` | CSP (incl. `unsafe-inline`, wildcards, missing `frame-ancestors`/`object-src`), HSTS (max-age, includeSubDomains, preload), X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy, COOP/COEP/CORP | CONF-07 |
-| `cookies` | Secure, HttpOnly, SameSite, `__Host-` / `__Secure-` prefix invariants | SESS-02 |
-| `info-disclosure` | Server fingerprinting headers, verbose error pages, source-map references in production JS | INFO-04 |
-| `html-comments` | HTML / JS comments flagged for TODO/FIXME/password/admin/debug, internal RFC1918 IPs | INFO-05 |
-| `form-security` | Login form posts password over `http://`, POST forms without obvious CSRF token, password fields without autocomplete | SESS-05 |
-| `robots-sitemap` | `/robots.txt` Disallow paths + sitemap references; `/sitemap.xml` URL inventory | INFO-03 |
-| `js-grep` | Scrapes every linked `<script src>`, greps for AWS/Google/GitHub/Slack/Stripe keys, JWTs, private-key blocks, bearer tokens, API endpoints, internal hostnames | INFO-05 |
-
-**Active - sends additional traffic**
-
-| Check | What it covers |
-|---|---|
-| `host-header` | Replaces Host, adds X-Forwarded-Host / X-Host / X-Forwarded-Server; checks reflection in body / Location / Set-Cookie |
-| `cors` | Reflective `Origin`, `null` origin, suffix-bypass (`target.com.attacker.test`), prefix-bypass (reserved-TLD canary), wildcard + credentials |
-| `http-methods` | OPTIONS allow-list, TRACE enabled, `X-HTTP-Method-Override` smuggling |
-| `sensitive-paths` | ~30 curated probes: `.git/HEAD`, `.env`, `.svn/entries`, `.DS_Store`, `web.config`, `phpinfo.php`, `/server-status`, Spring Boot Actuator, Swagger/OpenAPI, Tomcat Manager, Jenkins, H2 console, Symfony profiler, backup archives, etc. Each probe requires both 200 status AND a content fingerprint to reduce false positives. |
-
-**TLS - out-of-band probe**
-
-| Check | What it covers |
-|---|---|
-| `tls` | Enumerates protocol versions supported by the server (SSLv3, TLS 1.0/1.1/1.2/1.3), flags weak ones; reads leaf certificate for validity window + hostname/SAN match. Trust-all factory is scoped per-call (does not affect Burp's HTTP stack). |
+That's pretty much it.
 
 ## Build
 
-Requires Java 17. The project's Gradle build uses the foojay toolchain resolver, so Gradle will
-auto-download a matching JDK if you don't have one.
+You'll need Java 17. The Gradle setup uses the foojay toolchain resolver, so if you don't have a JDK 17 already, Gradle will fetch one on first build.
 
 ```sh
 gradle shadowJar
 ```
 
-The loadable JAR is `build/libs/analyze-target-0.2.0.jar`.
+The loadable JAR ends up in `build/libs/analyze-target-0.3.0.jar`.
 
-## Load in Burp
+Load it in Burp via **Extensions → Installed → Add → Java**, point at the JAR, click Next. You'll see `[analyze-target] ready` in the Output log if it loaded cleanly.
 
-1. Burp → Extensions → Installed → Add
-2. Extension type: Java
-3. Extension file: select `build/libs/analyze-target-0.2.0.jar`
-4. Next - you should see `[analyze-target] ready (13 checks).` in the Output log.
-
-## Use
-
-1. Find a request to analyze in Proxy / Site map / Repeater.
-2. Right-click → Extensions → Analyze Target.
-3. Watch the **Findings** tab - entries stream in as each check finishes. Click a row to inspect.
-4. Watch the **HTTP traffic** tab to see every request the plugin sent, with method, status, length,
-   and duration. Click any row to see request / response in Burp's editors.
-5. Toggle **Redact auth headers** in the toolbar (default ON) before exporting if the target uses
-   authentication - keeps cookies / bearer tokens out of the report.
-6. Click **Export HTML report…** to save a single self-contained file.
-
-## Architecture in 30 seconds
-
-```
-AnalyzeTargetExtension  (BurpExtension entry point)
-├── HttpTrafficLog       (observable list of all plugin-sent requests)
-├── AnalysisEngine       (fans out Checks on a worker pool, per-check timeouts)
-│   └── Check[] {        each gets a per-check AnalysisContext, calls ctx.sendRequest(req)
-│       passive/*        - read seed response, optional follow-ups
-│       active/*         - send crafted variants
-│       tls/*            - raw SSLSocket probes
-│   }
-└── AnalyzerTab          (JTabbedPane: Findings / HTTP traffic / About)
-    ├── Palette          (light/dark, derived from api.userInterface().currentTheme())
-    ├── FindingDetailPanel    (Burp HttpRequestEditor / HttpResponseEditor)
-    ├── HttpTrafficTab        (table → editor split)
-    └── HtmlReportWriter      (self-contained HTML export)
-```
-
-## Repository layout
+## Project structure
 
 ```
 analyze-target-burp-plugin/
 ├── build.gradle / settings.gradle / gradle.properties
-├── README.md            (this file)
-├── GIT_SETUP.md         (how to push to GitHub + collaborate)
-├── CONTRIBUTING.md      (how to add a new check)
-├── LICENSE              (MIT)
-├── .github/
-│   ├── workflows/ci.yml         (build on push/PR, attach JAR to releases)
-│   ├── ISSUE_TEMPLATE/*.md
-│   └── pull_request_template.md
-└── src/main/
-    ├── java/com/analyzer/      (~25 files, ~3500 lines)
-    └── resources/META-INF/services/burp.api.montoya.BurpExtension
+├── README.md            ← you are here
+├── GIT_SETUP.md         ← pushing to GitHub & collaborating
+├── CONTRIBUTING.md      ← how to add a new check
+├── LICENSE              ← MIT
+├── .github/             ← CI workflow, issue + PR templates
+└── src/main/java/com/analyzer/
+    ├── AnalyzeTargetExtension     ← entry point
+    ├── AnalyzeContextMenuProvider ← right-click action
+    ├── engine/                    ← AnalysisEngine, AnalysisContext
+    ├── checks/
+    │   ├── passive/    ← read the response, no extra traffic
+    │   ├── active/     ← send crafted variants
+    │   └── tls/        ← TLS protocol/cert probe
+    ├── model/          ← Finding, Severity, Confidence
+    ├── traffic/        ← HTTP traffic log
+    ├── ui/             ← Tabs, palette, table models, detail pane
+    └── report/         ← HTML report writer
 ```
 
-## Caveats and trade-offs
+The interesting folder for contributors is `checks/`. Each check is one Java file implementing the `Check` interface — `id()`, `category()`, `isActive()`, `run(ctx)`. Adding a new one is a single class plus a single line in `AnalysisEngine.defaultChecks()`. See `CONTRIBUTING.md` for the details.
 
-- **Traffic volume.** A typical run is ~40 requests. Don't point it at production unless your
-  engagement scope allows it. Active probes go to the same scheme/host/port as the seed request.
-- **TLS thoroughness.** The TLS check uses the local JDK's TLS stack - older protocols (SSLv3,
-  TLS 1.0) may be disabled at the JVM level and won't be detected even if the server supports them.
-  For definitive cipher coverage, run `testssl.sh` alongside.
-- **Secret-pattern false positives.** Regex hits in `js-grep` are intentionally permissive; verify
-  each before including in a deliverable.
-- **Burp scope.** The plugin does not currently consult Burp's scope rules - every active probe
-  goes to the request you right-clicked on. This is intentional (you decided to analyze this
-  request), but means active checks may hit out-of-scope third-party CDNs referenced from the seed
-  response. Pull requests welcome.
+## What's currently checked
+
+Without going through the long list (browse `checks/` for the full set), the categories are:
+
+- Security headers — CSP, HSTS, X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy, COOP/COEP/CORP
+- Cookie attributes — Secure, HttpOnly, SameSite, `__Host-`/`__Secure-` prefix invariants
+- Technology fingerprinting — server/framework/CDN/WAF identification from headers, cookies, and HTML
+- Information disclosure — Server/X-Powered-By, verbose errors, source maps in production JS
+- HTML/JS comments leaking TODO/FIXME/credentials/internal hostnames
+- Form security — login forms posting over HTTP, missing CSRF tokens, autocomplete hygiene
+- robots.txt + sitemap.xml inventory
+- JavaScript grep — fetches linked scripts, hunts for API keys, JWTs, internal endpoints
+- Host header attacks — injection, X-Forwarded-Host, reflection checks
+- CORS misconfigurations — reflective Origin, null, subdomain bypass tricks
+- HTTP methods — OPTIONS, TRACE, X-HTTP-Method-Override smuggling
+- Sensitive paths — ~30 curated probes (.git, .env, .DS_Store, web.config, Spring Actuator, Tomcat Manager, backup archives, etc.)
+- TLS — protocol versions, weak suites, cert validity/SAN match
+
+If there's a category you'd add, open an issue or send a PR — the bar to entry is low.
+
+## A few things to know
+
+**Traffic volume.** A full run is around 40 requests. There's a "Passive only" checkbox on the Target tab that skips everything noisy if you want to run against production without an engagement scope.
+
+**False positives happen.** The JavaScript secret-grep is intentionally generous to catch real things — verify each hit before it goes in a deliverable.
+
+**TLS thoroughness.** The TLS probe uses the local JDK's TLS stack, so protocols your JVM has disabled (often SSLv3 / TLS 1.0) won't be reported even if the server supports them. Run `testssl.sh` alongside if you need cipher-level coverage.
+
+**Burp scope.** The plugin currently doesn't consult Burp's scope rules — when you click Run, it goes after whatever you loaded. Adding scope-respect for active probes is on the roadmap; PR welcome.
 
 ## Roadmap
 
-- Burp scope integration toggle for active probes
-- JSON / SARIF report formats
-- WebSocket / GraphQL specific checks (introspection, mutation auth)
-- HTTP/2 specific issues (smuggling primitives)
-- Per-check enable/disable in the UI
+Rough ideas, in no particular order:
+
+- Per-check enable/disable in a settings panel (persisted across restarts)
+- JSON / SARIF / Markdown report formats alongside HTTP
+- Diff mode for re-analysis — show new vs resolved findings between runs
+- JWT analysis when `Authorization: Bearer` is present (alg none, weak HMAC, kid injection)
+- GraphQL-specific checks (introspection, depth limits, batched query bypass)
+- Burp Collaborator integration for blind SSRF / out-of-band probes
+- Authenticated vs unauthenticated differential — same probes both ways, flag the diff
+
+If any of these speak to you, the contribution path is open.
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) - adding a new check is one class + one line.
+See [CONTRIBUTING.md](CONTRIBUTING.md). Short version: fork, branch, add a check or fix a bug, open a PR. Manual testing instructions are in the PR template. There's a CI workflow that builds the JAR on every push and attaches it to GitHub releases — see [GIT_SETUP.md](GIT_SETUP.md) for the publishing flow.
+
+If you've never built a Burp extension before but want to learn, this is a friendly first project. The Check interface is three methods, and there are plenty of existing examples to copy.
 
 ## License
 
-[MIT](LICENSE). Build, fork, extend.
+[MIT](LICENSE) — build, fork, ship, sell, whatever. No warranty, no obligation. If it saves you an hour on an engagement, that's enough.
+
+Thanks for stopping by.
