@@ -17,7 +17,7 @@ import java.util.List;
  * Tests common CORS misconfigurations:
  *   - reflective Origin (server echoes whatever Origin was sent)
  *   - null origin accepted (sandboxed iframes, file://)
- *   - regex bypasses: attacker.com.target.com / target.com.attacker.com
+ *   - regex bypasses: prefix/suffix matching flaws (target.com.external / external host with target prefix)
  *   - wildcard with credentials (browser will block but server config is dangerous)
  */
 public class CorsCheck implements Check {
@@ -41,21 +41,23 @@ public class CorsCheck implements Check {
         }
         if (host == null) return out;
 
-        String reflective  = "https://evil-cors.analyze-target.test";
+        // All canaries use the reserved `.test` TLD (RFC 6761) so they can never resolve to a real
+        // host, and a neutral `pentesting` label rather than an obviously hostile one.
+        String reflective  = "https://pentesting.test";
         String nullOrigin  = "null";
-        String suffixBypass = "https://" + host + ".attacker.test";   // target.com.attacker.test
-        // Prefix-bypass: use a reserved-TLD host. Constructing `attackertarget.com` from a real
-        // target risks the canary colliding with a registered domain - `.test` is reserved by RFC 6761.
-        String prefixBypass = "https://attacker-" + host.replace('.', '-') + ".prefix.analyze-target.test";
+        String suffixBypass = "https://" + host + ".pentesting.test";   // target.com.pentesting.test
+        // Prefix-bypass: an external host whose name starts with the target's. Built on a reserved
+        // TLD so it cannot collide with a registered domain.
+        String prefixBypass = "https://pentesting-" + host.replace('.', '-') + ".pentesting.test";
 
         probe(ctx, seed.withRemovedHeader("Origin").withAddedHeader("Origin", reflective),
                 "Reflective Origin", reflective, out);
         probe(ctx, seed.withRemovedHeader("Origin").withAddedHeader("Origin", nullOrigin),
                 "Null Origin", nullOrigin, out);
         probe(ctx, seed.withRemovedHeader("Origin").withAddedHeader("Origin", suffixBypass),
-                "Suffix-bypass Origin (target.com.attacker.test)", suffixBypass, out);
+                "Suffix-bypass Origin (target.com.pentesting.test)", suffixBypass, out);
         probe(ctx, seed.withRemovedHeader("Origin").withAddedHeader("Origin", prefixBypass),
-                "Prefix-bypass Origin (attackertarget.com)", prefixBypass, out);
+                "Prefix-bypass Origin (target-name prefix on external host)", prefixBypass, out);
 
         return out;
     }

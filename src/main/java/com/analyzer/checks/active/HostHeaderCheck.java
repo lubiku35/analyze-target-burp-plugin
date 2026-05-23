@@ -16,15 +16,18 @@ import java.util.List;
  * Host header attack probes. We try several variants and look for the canary value reflected in
  * the body, in the Location header, or in cache-control surrogate keys.
  *
- *  - replace Host: with attacker host
+ *  - replace Host: with an external test host
  *  - keep real Host: but add X-Forwarded-Host
  *  - add X-Host (some frameworks honour this)
  *  - send absolute URI in the request line (proxy-routing trick)
  *  - duplicate Host header
+ *
+ * The canary uses the reserved `.test` TLD (RFC 6761), so it can never resolve to a real host,
+ * and a neutral label so it does not trip aggressive WAFs that block obviously hostile values.
  */
 public class HostHeaderCheck implements Check {
     private static final String ID = "host-header";
-    private static final String CANARY = "evil.analyze-target.test";
+    private static final String CANARY = "pentesting.test";
 
     @Override public String id() { return ID; }
     @Override public String category() { return "Host header attacks"; }
@@ -38,7 +41,7 @@ public class HostHeaderCheck implements Check {
 
         // Variant 1: replace Host
         probe(ctx, seed.withRemovedHeader("Host").withAddedHeader("Host", CANARY),
-                "Host header replaced with attacker value", out);
+                "Host header replaced with external test host", out);
 
         // Variant 2: keep original Host, add X-Forwarded-Host
         probe(ctx, seed.withAddedHeader("X-Forwarded-Host", CANARY),

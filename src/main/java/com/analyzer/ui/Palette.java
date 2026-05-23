@@ -45,11 +45,12 @@ public final class Palette {
             border            = new Color(0x3C404B);
             accent            = new Color(0xFF6633); // Burp orange
 
-            sevCriticalBg = new Color(0x5C1F1F); sevCriticalFg = new Color(0xFFB4B4);
-            sevHighBg     = new Color(0x5C3A1F); sevHighFg     = new Color(0xFFCC99);
-            sevMediumBg   = new Color(0x5C521F); sevMediumFg   = new Color(0xFFE699);
-            sevLowBg      = new Color(0x1F4D2A); sevLowFg      = new Color(0x9FE0AF);
-            sevInfoBg     = new Color(0x1F3A5C); sevInfoFg     = new Color(0x9FC4FF);
+            // info=green, low=yellow, medium=orange, high=red, critical=dark red/near-black
+            sevCriticalBg = new Color(0x180404); sevCriticalFg = new Color(0xFF8A8A);
+            sevHighBg     = new Color(0x5C1F1F); sevHighFg     = new Color(0xFF9F9F);
+            sevMediumBg   = new Color(0x5C3A1F); sevMediumFg   = new Color(0xFFC08A);
+            sevLowBg      = new Color(0x5C551F); sevLowFg      = new Color(0xFFE680);
+            sevInfoBg     = new Color(0x1F4D2A); sevInfoFg     = new Color(0x9FE0AF);
         } else {
             background        = new Color(0xFAFAFA);
             panelBackground   = new Color(0xFFFFFF);
@@ -62,11 +63,12 @@ public final class Palette {
             border            = new Color(0xDCE1E8);
             accent            = new Color(0xE25A1F); // Burp orange (slightly darker for contrast)
 
-            sevCriticalBg = new Color(0xFFE0E0); sevCriticalFg = new Color(0x9A0000);
-            sevHighBg     = new Color(0xFFE7CC); sevHighFg     = new Color(0xA34800);
-            sevMediumBg   = new Color(0xFFF5C2); sevMediumFg   = new Color(0x755A00);
-            sevLowBg      = new Color(0xD9F1DE); sevLowFg      = new Color(0x1F6B33);
-            sevInfoBg     = new Color(0xDCE9F8); sevInfoFg     = new Color(0x1A4F8F);
+            // info=green, low=yellow, medium=orange, high=red, critical=dark red/near-black
+            sevCriticalBg = new Color(0x330000); sevCriticalFg = new Color(0xFFC2C2);
+            sevHighBg     = new Color(0xFFD4D4); sevHighFg     = new Color(0xB11212);
+            sevMediumBg   = new Color(0xFFE2C2); sevMediumFg   = new Color(0x9A4E00);
+            sevLowBg      = new Color(0xFBF3C0); sevLowFg      = new Color(0x6E5A00);
+            sevInfoBg     = new Color(0xDCF1E1); sevInfoFg     = new Color(0x1F6B33);
         }
     }
 

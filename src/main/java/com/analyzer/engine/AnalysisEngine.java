@@ -5,9 +5,11 @@ import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.http.message.responses.HttpResponse;
 import com.analyzer.checks.Check;
 import com.analyzer.checks.active.CorsCheck;
+import com.analyzer.checks.active.CrossDomainPolicyCheck;
 import com.analyzer.checks.active.HostHeaderCheck;
 import com.analyzer.checks.active.HttpMethodsCheck;
 import com.analyzer.checks.active.SensitivePathsCheck;
+import com.analyzer.checks.passive.CacheControlCheck;
 import com.analyzer.checks.passive.CookieFlagsCheck;
 import com.analyzer.checks.passive.FormSecurityCheck;
 import com.analyzer.checks.passive.HtmlCommentsCheck;
@@ -57,12 +59,14 @@ public final class AnalysisEngine {
         list.add(new InfoDisclosureCheck());
         list.add(new HtmlCommentsCheck());
         list.add(new FormSecurityCheck());
+        list.add(new CacheControlCheck());
         list.add(new RobotsSitemapCheck());
         list.add(new JavaScriptGrepCheck());
         // Active - additional traffic
         list.add(new HostHeaderCheck());
         list.add(new CorsCheck());
         list.add(new HttpMethodsCheck());
+        list.add(new CrossDomainPolicyCheck());
         list.add(new SensitivePathsCheck());
         // TLS - connects directly to host:443 with the local JDK
         list.add(new TlsCheck());
