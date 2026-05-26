@@ -7,6 +7,7 @@ import com.analyzer.checks.Redaction;
 import com.analyzer.engine.AnalysisEngine;
 import com.analyzer.model.Finding;
 import com.analyzer.model.Severity;
+import com.analyzer.persistence.StateStore;
 import com.analyzer.report.HtmlReportWriter;
 import com.analyzer.traffic.HttpTrafficLog;
 
@@ -38,6 +39,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 /**
  * Root component for the Analyze Target suite tab. Tabs: Target | Findings | HTTP traffic | About.
@@ -53,12 +55,15 @@ public class AnalyzerTab extends JPanel {
     private final FindingsTableModel model = new FindingsTableModel();
     private final FindingDetailPanel detailPanel;
     private final TargetPanel targetPanel;
+    private final SummaryPanel summaryPanel;
     private final JTabbedPane outer;
     private final JLabel statusLabel = new JLabel(" ");
     private final JProgressBar progressBar = new JProgressBar();
     private final JTable table;
     private final int findingsTabIndex;
     private final int targetTabIndex;
+    private final StateStore stateStore;
+    private HttpRequest currentTargetRequest;   // for SummaryPanel context on completion
 
     public AnalyzerTab(MontoyaApi api, AnalysisEngine engine, HttpTrafficLog trafficLog) {
         super(new BorderLayout());
@@ -70,6 +75,8 @@ public class AnalyzerTab extends JPanel {
 
         this.detailPanel = new FindingDetailPanel(api, palette);
         this.targetPanel = new TargetPanel(api, palette, this::startAnalysis);
+        this.summaryPanel = new SummaryPanel(api, palette);
+        this.stateStore = new StateStore(api);
 
         table = new JTable(model);
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
@@ -138,13 +145,35 @@ public class AnalyzerTab extends JPanel {
         outer = new JTabbedPane();
         outer.addTab("Target", targetPanel);
         targetTabIndex = 0;
+        outer.addTab("Summary", summaryPanel);
         outer.addTab("Findings", findingsPane);
-        findingsTabIndex = 1;
+        findingsTabIndex = 2;
         outer.addTab("HTTP traffic", new HttpTrafficTab(api, trafficLog, palette));
         outer.addTab("About", buildAboutPanel());
         api.userInterface().applyThemeToComponent(outer);
 
         add(outer, BorderLayout.CENTER);
+
+        // Restore any state from the current Burp project (no-op if there's nothing or if the
+        // project is in memory only).
+        restorePersistedState();
+    }
+
+    private void restorePersistedState() {
+        try {
+            StateStore.Restored r = stateStore.restore();
+            if (r.target() != null) {
+                this.currentTargetRequest = r.target();
+                targetPanel.loadTarget(r.target(), r.targetResponse());
+            }
+            if (!r.findings().isEmpty()) {
+                for (Finding f : r.findings()) model.addFinding(f);
+                summaryPanel.updateSummary(r.target(), r.findings());
+                setStatus("Restored " + r.findings().size() + " finding(s) from the saved Burp project.");
+            }
+        } catch (Exception e) {
+            api.logging().logToError("[analyze-target] state restore failed: " + e);
+        }
     }
 
     private void sizeColumns() {
@@ -230,6 +259,8 @@ public class AnalyzerTab extends JPanel {
     /** Called from the right-click context menu. Loads the request - does not run. */
     public void loadTarget(HttpRequest req, HttpResponse resp) {
         targetPanel.loadTarget(req, resp);
+        this.currentTargetRequest = req;
+        stateStore.saveTarget(req, resp);
         setStatus("Loaded target. Switch to the Target tab and click Run analysis.");
         // Switch to the Target tab so the user immediately sees what's loaded.
         SwingUtilities.invokeLater(() -> outer.setSelectedIndex(targetTabIndex));
@@ -249,6 +280,7 @@ public class AnalyzerTab extends JPanel {
 
     private void startAnalysis(HttpRequest req, HttpResponse resp) {
         boolean passiveOnly = targetPanel.isPassiveOnly();
+        this.currentTargetRequest = req;
         setStatus("Analyzing " + req.url() + (passiveOnly ? " (passive only)" : "") + " - running checks…");
         // Auto-switch to Findings so the user sees results coming in.
         SwingUtilities.invokeLater(() -> {
@@ -269,6 +301,11 @@ public class AnalyzerTab extends JPanel {
                         progressBar.setString("complete");
                     });
                     targetPanel.onAnalysisComplete();
+                    // Refresh the Summary panel with everything we just collected.
+                    List<Finding> snapshot = model.snapshot();
+                    summaryPanel.updateSummary(req, snapshot);
+                    // Persist findings so they survive a Burp restart (within a saved project).
+                    stateStore.saveFindings(snapshot);
                 });
     }
 
@@ -285,6 +322,8 @@ public class AnalyzerTab extends JPanel {
     private void onClearFindings(ActionEvent e) {
         model.clear();
         detailPanel.showFinding(null);
+        summaryPanel.clear();
+        stateStore.saveFindings(List.of());
         setStatus("Findings cleared.");
     }
 

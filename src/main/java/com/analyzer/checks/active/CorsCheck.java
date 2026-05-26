@@ -2,6 +2,7 @@ package com.analyzer.checks.active;
 
 import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.http.message.responses.HttpResponse;
+import com.analyzer.checks.Canary;
 import com.analyzer.checks.Check;
 import com.analyzer.checks.HttpUtil;
 import com.analyzer.engine.AnalysisContext;
@@ -41,23 +42,20 @@ public class CorsCheck implements Check {
         }
         if (host == null) return out;
 
-        // All canaries use the reserved `.test` TLD (RFC 6761) so they can never resolve to a real
-        // host, and a neutral `pentesting` label rather than an obviously hostile one.
-        String reflective  = "https://pentesting.test";
-        String nullOrigin  = "null";
-        String suffixBypass = "https://" + host + ".pentesting.test";   // target.com.pentesting.test
-        // Prefix-bypass: an external host whose name starts with the target's. Built on a reserved
-        // TLD so it cannot collide with a registered domain.
-        String prefixBypass = "https://pentesting-" + host.replace('.', '-') + ".pentesting.test";
+        // Canaries are self-explanatory in target access logs — see com.analyzer.checks.Canary.
+        String reflective   = Canary.corsOrigin();
+        String nullOrigin   = "null";
+        String suffixBypass = Canary.suffixBypassOrigin(host);
+        String prefixBypass = Canary.prefixBypassOrigin(host);
 
         probe(ctx, seed.withRemovedHeader("Origin").withAddedHeader("Origin", reflective),
                 "Reflective Origin", reflective, out);
         probe(ctx, seed.withRemovedHeader("Origin").withAddedHeader("Origin", nullOrigin),
                 "Null Origin", nullOrigin, out);
         probe(ctx, seed.withRemovedHeader("Origin").withAddedHeader("Origin", suffixBypass),
-                "Suffix-bypass Origin (target.com.pentesting.test)", suffixBypass, out);
+                "Suffix-bypass Origin (target.host." + Canary.HOST + ")", suffixBypass, out);
         probe(ctx, seed.withRemovedHeader("Origin").withAddedHeader("Origin", prefixBypass),
-                "Prefix-bypass Origin (target-name prefix on external host)", prefixBypass, out);
+                "Prefix-bypass Origin (target-name prefix on external canary host)", prefixBypass, out);
 
         return out;
     }
@@ -93,6 +91,7 @@ public class CorsCheck implements Check {
                         .evidence("Sent Origin: " + sentOrigin + "\nAccess-Control-Allow-Origin: " + aco
                                 + (acc != null ? "\nAccess-Control-Allow-Credentials: " + acc : ""))
                         .references(List.of(
+                                "https://cheatsheetseries.owasp.org/cheatsheets/HTML5_Security_Cheat_Sheet.html#cross-origin-resource-sharing",
                                 "https://portswigger.net/web-security/cors",
                                 "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Origin"))
                         .request(req)

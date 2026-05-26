@@ -113,6 +113,25 @@ public class TechFingerprintCheck implements Check {
         COOKIE_HINTS.put("arraffinity", "Azure App Service (ARR affinity)");
         COOKIE_HINTS.put("arraffinitysamesite", "Azure App Service");
         COOKIE_HINTS.put("wordpress_test_cookie", "WordPress");
+        // ---- Catalogue from OWASP WSTG INFO-08 (Fingerprint Web Application Framework) ----
+        COOKIE_HINTS.put("zope3",            "Zope");
+        COOKIE_HINTS.put("cakephp",          "CakePHP");
+        COOKIE_HINTS.put("kohanasession",    "Kohana");
+        COOKIE_HINTS.put("amp",              "AMPcms");
+        COOKIE_HINTS.put("django",           "Django CMS");
+        COOKIE_HINTS.put("dotnetnukeanonymous", "DotNetNuke");
+        COOKIE_HINTS.put("e107_tz",          "e107");
+        COOKIE_HINTS.put("episerver",        "EPiServer");
+        COOKIE_HINTS.put("epitrace",         "EPiServer");
+        COOKIE_HINTS.put("graffitibot",      "Graffiti CMS");
+        COOKIE_HINTS.put("hotaru_mobile",    "Hotaru CMS");
+        COOKIE_HINTS.put("icmsession",       "ImpressCMS");
+        COOKIE_HINTS.put("makacsession",     "Indico");
+        COOKIE_HINTS.put("cmspreferredculture", "Kentico CMS");
+        COOKIE_HINTS.put("fe_typo_user",     "TYPO3");
+        COOKIE_HINTS.put("dynamicweb",       "Dynamicweb");
+        COOKIE_HINTS.put("vivvosessionid",   "VIVVO");
+        COOKIE_HINTS.put("zenphoto_auth",    "Zenphoto");
     }
 
     /** Cookie name prefix -> backend hint (for cookies with dynamic suffixes). */
@@ -123,6 +142,12 @@ public class TechFingerprintCheck implements Check {
         COOKIE_PREFIX_HINTS.put("visid_incap_", "Imperva Incapsula WAF");
         COOKIE_PREFIX_HINTS.put("wp-settings-", "WordPress");
         COOKIE_PREFIX_HINTS.put("wordpress_logged_in_", "WordPress (authenticated session)");
+        // WSTG INFO-08 dynamic-suffix cookies
+        COOKIE_PREFIX_HINTS.put("phpbb3_",       "phpBB 3");
+        COOKIE_PREFIX_HINTS.put("bitrix_",       "1C-Bitrix");
+        COOKIE_PREFIX_HINTS.put("instantcms",    "InstantCMS");
+        COOKIE_PREFIX_HINTS.put("sn4",           "MODx Revolution");
+        COOKIE_PREFIX_HINTS.put("lep",           "LEPTON CMS");
     }
 
     /** HTML pattern → label. Patterns are checked against the first ~32 KB of body. */
@@ -162,6 +187,18 @@ public class TechFingerprintCheck implements Check {
         HTML_HINTS.put("hCaptcha",  Pattern.compile("(?i)\\bhcaptcha\\.com"));
         HTML_HINTS.put("Cloudflare Turnstile", Pattern.compile("(?i)challenges\\.cloudflare\\.com/turnstile"));
         HTML_HINTS.put("Stripe.js", Pattern.compile("(?i)js\\.stripe\\.com"));
+        // ---- WSTG INFO-08 specific markers ----
+        HTML_HINTS.put("MediaWiki",         Pattern.compile("(?i)<meta name=[\"']generator[\"'] content=[\"']MediaWiki"));
+        HTML_HINTS.put("phpBB",             Pattern.compile("(?i)<body[^>]+id=[\"']phpbb"));
+        HTML_HINTS.put("DotNetNuke",        Pattern.compile("(?i)DNN Platform|dnnsoftware\\.com"));
+        HTML_HINTS.put("Adobe ColdFusion (header tags)",
+                                            Pattern.compile("(?i)<!--\\s*START headerTags\\.cfm"));
+        HTML_HINTS.put("ASP.NET (__VIEWSTATE)",
+                                            Pattern.compile("(?i)__VIEWSTATE"));
+        HTML_HINTS.put("ZK framework",      Pattern.compile("(?i)<!--\\s*ZK\\b"));
+        HTML_HINTS.put("Adobe Business Catalyst",
+                                            Pattern.compile("(?i)<!--\\s*BC_OBNW\\s*-->"));
+        HTML_HINTS.put("Indexhibit",        Pattern.compile("(?i)ndxz-studio"));
     }
 
     /** Library label -> pattern whose group(1) captures a version string from markup (script/link hrefs). */
@@ -254,7 +291,8 @@ public class TechFingerprintCheck implements Check {
                     .evidence(String.join("\n", hits))
                     .references(List.of(
                             "https://owasp.org/www-project-web-security-testing-guide/v42/4-Web_Application_Security_Testing/01-Information_Gathering/02-Fingerprint_Web_Server",
-                            "https://owasp.org/www-project-web-security-testing-guide/v42/4-Web_Application_Security_Testing/01-Information_Gathering/08-Fingerprint_Web_Application_Framework"))
+                            "https://owasp.org/www-project-web-security-testing-guide/v42/4-Web_Application_Security_Testing/01-Information_Gathering/08-Fingerprint_Web_Application_Framework",
+                            "https://owasp.org/www-project-web-security-testing-guide/v42/4-Web_Application_Security_Testing/01-Information_Gathering/09-Fingerprint_Web_Application"))
                     .request(ctx.seedRequest())
                     .response(resp)
                     .build());

@@ -94,6 +94,7 @@ public class CookieFlagsCheck implements Check {
                                 + "iframes), Secure is mandatory or modern browsers reject the cookie outright.")
                         .evidence("Set-Cookie: " + cookie)
                         .references(List.of(
+                                "https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html#cookies",
                                 "https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies",
                                 "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#cookie_prefixes",
                                 "https://owasp.org/www-project-web-security-testing-guide/v42/4-Web_Application_Security_Testing/06-Session_Management_Testing/02-Testing_for_Cookies_Attributes"))

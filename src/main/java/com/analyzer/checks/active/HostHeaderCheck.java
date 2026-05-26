@@ -2,6 +2,7 @@ package com.analyzer.checks.active;
 
 import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.http.message.responses.HttpResponse;
+import com.analyzer.checks.Canary;
 import com.analyzer.checks.Check;
 import com.analyzer.checks.HttpUtil;
 import com.analyzer.engine.AnalysisContext;
@@ -27,7 +28,7 @@ import java.util.List;
  */
 public class HostHeaderCheck implements Check {
     private static final String ID = "host-header";
-    private static final String CANARY = "pentesting.test";
+    private static final String CANARY = Canary.HOST;
 
     @Override public String id() { return ID; }
     @Override public String category() { return "Host header attacks"; }
@@ -87,6 +88,7 @@ public class HostHeaderCheck implements Check {
                                 + "Never use these headers to build absolute URLs in email links or redirects without validation.")
                         .evidence("Canary `" + CANARY + "` reflected in " + where + ".")
                         .references(List.of(
+                                "https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Headers_Cheat_Sheet.html",
                                 "https://portswigger.net/web-security/host-header",
                                 "https://owasp.org/www-community/attacks/Host_Header_Injection"))
                         .request(req)

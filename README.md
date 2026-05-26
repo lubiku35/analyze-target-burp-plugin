@@ -10,7 +10,11 @@ It's a Burp Suite extension, written in Java 17 against Burp's modern Montoya AP
 
 You point it at one HTTP request. Right-click any request in Proxy, Repeater, or Target → Extensions → **Send to Analyze Target**. The plugin loads that request into its own tab; nothing runs yet. You review it (and edit it if you like - change a header, swap a parameter), then click **Run analysis**.
 
-Behind the scenes, an engine fans out a dozen-plus checks in parallel. Each check is a small Java class that either reads the seed response (passive) or sends some additional crafted requests (active). A progress bar shows how many checks have finished, and findings stream into the **Findings** tab as they appear - severity-coloured (green INFO, yellow LOW, orange MEDIUM, red HIGH, dark-red CRITICAL), sortable, click any row for the full description, remediation, evidence, and the underlying request/response in Burp's native editor. Every request the plugin itself sends shows up live in the **HTTP traffic** tab so you can see exactly what's going out.
+Behind the scenes, an engine fans out a dozen-plus checks in parallel. Each check is a small Java class that either reads the seed response (passive) or sends some additional crafted requests (active). A progress bar shows how many checks have finished, and findings stream into the **Findings** tab as they appear - severity-coloured (green INFO, yellow LOW, orange MEDIUM, red HIGH, dark-red CRITICAL), sortable, click any row for the full description, remediation, evidence, and the underlying request/response in Burp's native editor. The **Summary** tab synthesises everything into a quick narrative — what the target is, what was found, what the stack probably is, the highest-impact issues, and rule-based follow-up suggestions ("WordPress detected → wpscan", "Spring Actuator exposed → try /actuator/env", "Bearer token present → JWT alg=none and weak HMAC checks", etc.). Every request the plugin itself sends shows up live in the **HTTP traffic** tab so you can see exactly what's going out.
+
+State persists with the Burp project — close Burp and re-open a saved project file, and the loaded target plus the findings from your last run are still there. Useful for multi-day engagements where you'd otherwise have to re-run from scratch. (The HTTP traffic log is intentionally ephemeral — it can be large and only really matters within a single run.)
+
+Active probes that need a canary host or path use a self-explanatory name (`surethisdoesnotexist.xyz` for Host / Origin reflection, `/surethisdoesnotexist-<random>` for forced 404s). If a defender sees one in their logs, the intent is obvious — these are fingerprint probes, not live attack attempts.
 
 Want to stay quiet? Tick **Passive only** on the Target tab before running. It runs just the read-only checks and sends no extra traffic at all - no active probes, no TLS connect, no follow-up fetches - so it's safe to point at production without an engagement scope.
 
@@ -26,7 +30,7 @@ You'll need Java 17. The Gradle setup uses the foojay toolchain resolver, so if 
 gradle shadowJar
 ```
 
-The loadable JAR ends up in `build/libs/analyze-target-0.3.0.jar`.
+The loadable JAR ends up in `build/libs/analyze-target-0.5.0.jar`.
 
 Load it in Burp via **Extensions → Installed → Add → Java**, point at the JAR, click Next. You'll see `[analyze-target] ready` in the Output log if it loaded cleanly.
 
@@ -60,21 +64,25 @@ The interesting folder for contributors is `checks/`. Each check is one Java fil
 
 Without going through the long list (browse `checks/` for the full set), the categories are:
 
-- Security headers - CSP, HSTS, X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy, COOP/COEP/CORP
-- Cookie attributes - Secure, HttpOnly, SameSite, `__Host-`/`__Secure-` prefix invariants
-- Technology fingerprinting - server/framework/CDN/WAF/cloud identification from headers, cookies, and HTML, plus client-library version extraction (jQuery, Bootstrap, Angular, and friends)
-- Information disclosure - Server/X-Powered-By, verbose errors, source maps in production JS
+- CSP — standalone finding for missing or weak Content-Security-Policy (descriptions aligned with the OWASP CSP Cheat Sheet)
+- HSTS — standalone finding for missing or weak Strict-Transport-Security
+- Other security headers — ONE consolidated finding listing all gaps among X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy, COOP/COEP/CORP (aggregated to keep the table readable)
+- Cookie attributes — Secure, HttpOnly, SameSite, `__Host-`/`__Secure-` prefix invariants
+- Technology fingerprinting — server/framework/CDN/WAF/cloud identification from headers, cookies, and HTML, including the full OWASP WSTG INFO-08 catalogue (Zope, CakePHP, Kohana, phpBB, BITRIX, Django CMS, DotNetNuke, e107, EPiServer, TYPO3, MODx, LEPTON, Wix, VIVVO, Zenphoto, Indico, Kentico, Dynamicweb, ImpressCMS, Hotaru, Graffiti, InstantCMS, AMPcms, etc.), specific framework markers (ColdFusion headerTags, ASP.NET __VIEWSTATE, ZK, Business Catalyst, Indexhibit, phpBB body id, DNN Platform), plus client-library version extraction (jQuery, Bootstrap, Angular, …)
+- Index / default page enumeration — probes `/index.{html,php,jsp,do,action,aspx,asp,cfm,cgi,pl,py,rb}`, `Default.aspx`, `Main.aspx`, `home.*` variants; each hit doubles as a stack hint
+- Error page fingerprinting — forces a 404 on a random path, then matches the response against a catalogue from 0xdf's 404 cheatsheet (Apache, nginx, IIS, Tomcat, Jetty, Express, Django, Flask, Rails, Spring Boot Whitelabel, Laravel Whoops, Symfony, PHP, S3, API Gateway, Cloudflare edge, etc.)
+- Information disclosure — Server/X-Powered-By, verbose errors, source maps in production JS
 - HTML/JS comments leaking TODO/FIXME/credentials/internal hostnames
-- Form security - login forms posting over HTTP, missing CSRF tokens, autocomplete hygiene
-- Sensitive-content caching - authenticated/personalised responses missing `Cache-Control: no-store`
+- Form security — login forms posting over HTTP, missing CSRF tokens, autocomplete hygiene
+- Sensitive-content caching — authenticated/personalised responses missing `Cache-Control: no-store`
 - robots.txt + sitemap.xml inventory
-- JavaScript grep - fetches linked scripts, hunts for API keys, JWTs, internal endpoints
-- Host header attacks - injection, X-Forwarded-Host, reflection checks
-- CORS misconfigurations - reflective Origin, null, subdomain bypass tricks
-- HTTP methods - full verb enumeration (HEAD/POST/PUT/DELETE/PATCH/CONNECT plus an unknown method), OPTIONS allow-list, TRACE/Cross-Site-Tracing, X-HTTP-Method-Override smuggling
-- Cross-domain policy - crossdomain.xml / clientaccesspolicy.xml permissiveness
-- Sensitive paths - ~30 curated probes (.git, .env, .DS_Store, web.config, Spring Actuator, Tomcat Manager, backup archives, etc.)
-- TLS - protocol versions, weak suites, cert validity/SAN match
+- JavaScript grep — fetches linked scripts, hunts for API keys, JWTs, internal endpoints
+- Host header attacks — injection, X-Forwarded-Host, reflection checks
+- CORS misconfigurations — reflective Origin, null, subdomain bypass tricks
+- HTTP methods — full verb enumeration (HEAD/POST/PUT/DELETE/PATCH/CONNECT plus an unknown method), OPTIONS allow-list, TRACE / Cross-Site-Tracing, X-HTTP-Method-Override smuggling
+- Cross-domain policy — crossdomain.xml / clientaccesspolicy.xml permissiveness
+- Sensitive paths — ~30 curated probes (.git, .env, .DS_Store, web.config, Spring Actuator, Tomcat Manager, backup archives, etc.)
+- TLS — protocol versions, weak suites, cert validity/SAN match
 
 If there's a category you'd add, open an issue or send a PR - the bar to entry is low.
 

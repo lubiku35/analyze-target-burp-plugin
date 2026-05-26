@@ -6,12 +6,16 @@ import burp.api.montoya.http.message.responses.HttpResponse;
 import com.analyzer.checks.Check;
 import com.analyzer.checks.active.CorsCheck;
 import com.analyzer.checks.active.CrossDomainPolicyCheck;
+import com.analyzer.checks.active.ErrorPageFingerprintCheck;
 import com.analyzer.checks.active.HostHeaderCheck;
 import com.analyzer.checks.active.HttpMethodsCheck;
+import com.analyzer.checks.active.IndexPageProbeCheck;
 import com.analyzer.checks.active.SensitivePathsCheck;
 import com.analyzer.checks.passive.CacheControlCheck;
 import com.analyzer.checks.passive.CookieFlagsCheck;
+import com.analyzer.checks.passive.CspCheck;
 import com.analyzer.checks.passive.FormSecurityCheck;
+import com.analyzer.checks.passive.HstsCheck;
 import com.analyzer.checks.passive.HtmlCommentsCheck;
 import com.analyzer.checks.passive.InfoDisclosureCheck;
 import com.analyzer.checks.passive.JavaScriptGrepCheck;
@@ -52,9 +56,11 @@ public final class AnalysisEngine {
 
     private static List<Check> defaultChecks() {
         List<Check> list = new ArrayList<>();
-        // Passive - read-only of the seed response (TechFingerprintCheck is borderline; it may fetch /)
+        // Passive - read the seed response, no extra traffic (RobotsSitemap and JS grep do fetch a bit).
         list.add(new TechFingerprintCheck());
-        list.add(new SecurityHeadersCheck());
+        list.add(new CspCheck());                 // standalone — CSP is too important to aggregate
+        list.add(new HstsCheck());                // standalone — HSTS is too important to aggregate
+        list.add(new SecurityHeadersCheck());     // consolidates the other 5+ headers into ONE finding
         list.add(new CookieFlagsCheck());
         list.add(new InfoDisclosureCheck());
         list.add(new HtmlCommentsCheck());
@@ -67,6 +73,8 @@ public final class AnalysisEngine {
         list.add(new CorsCheck());
         list.add(new HttpMethodsCheck());
         list.add(new CrossDomainPolicyCheck());
+        list.add(new IndexPageProbeCheck());      // common index files → stack hints
+        list.add(new ErrorPageFingerprintCheck()); // forced 404 → framework fingerprint
         list.add(new SensitivePathsCheck());
         // TLS - connects directly to host:443 with the local JDK
         list.add(new TlsCheck());
