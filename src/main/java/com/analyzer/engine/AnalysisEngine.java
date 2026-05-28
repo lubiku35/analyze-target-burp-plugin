@@ -4,23 +4,40 @@ import burp.api.montoya.MontoyaApi;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.http.message.responses.HttpResponse;
 import com.analyzer.checks.Check;
+import com.analyzer.checks.active.AdminPanelCheck;
+import com.analyzer.checks.active.ApiDiscoveryCheck;
+import com.analyzer.checks.active.BackupFilesCheck;
 import com.analyzer.checks.active.CorsCheck;
 import com.analyzer.checks.active.CrossDomainPolicyCheck;
 import com.analyzer.checks.active.ErrorPageFingerprintCheck;
 import com.analyzer.checks.active.HostHeaderCheck;
 import com.analyzer.checks.active.HttpMethodsCheck;
 import com.analyzer.checks.active.IndexPageProbeCheck;
+import com.analyzer.checks.active.DirectoryListingCheck;
+import com.analyzer.checks.active.HttpsRedirectCheck;
 import com.analyzer.checks.active.SensitivePathsCheck;
+import com.analyzer.checks.active.WellKnownProbesCheck;
 import com.analyzer.checks.passive.CacheControlCheck;
+import com.analyzer.checks.passive.ContentTypeCheck;
 import com.analyzer.checks.passive.CookieFlagsCheck;
+import com.analyzer.checks.passive.CookieScopeCheck;
 import com.analyzer.checks.passive.CspCheck;
 import com.analyzer.checks.passive.FormSecurityCheck;
 import com.analyzer.checks.passive.HstsCheck;
 import com.analyzer.checks.passive.HtmlCommentsCheck;
 import com.analyzer.checks.passive.InfoDisclosureCheck;
 import com.analyzer.checks.passive.JavaScriptGrepCheck;
+import com.analyzer.checks.passive.JwtAnalysisCheck;
+import com.analyzer.checks.passive.LeakInspectorCheck;
+import com.analyzer.checks.passive.LinkExtractionCheck;
+import com.analyzer.checks.passive.MixedContentCheck;
+import com.analyzer.checks.passive.OpenRedirectParamCheck;
+import com.analyzer.checks.passive.PassiveCorsCheck;
+import com.analyzer.checks.passive.ReflectedParameterCheck;
 import com.analyzer.checks.passive.RobotsSitemapCheck;
 import com.analyzer.checks.passive.SecurityHeadersCheck;
+import com.analyzer.checks.passive.SerializedObjectCheck;
+import com.analyzer.checks.passive.SubresourceIntegrityCheck;
 import com.analyzer.checks.passive.TechFingerprintCheck;
 import com.analyzer.checks.tls.TlsCheck;
 import com.analyzer.model.Finding;
@@ -56,7 +73,7 @@ public final class AnalysisEngine {
 
     private static List<Check> defaultChecks() {
         List<Check> list = new ArrayList<>();
-        // Passive - read the seed response, no extra traffic (RobotsSitemap and JS grep do fetch a bit).
+        // Passive — read the seed response, no extra traffic.
         list.add(new TechFingerprintCheck());
         list.add(new CspCheck());                 // standalone — CSP is too important to aggregate
         list.add(new HstsCheck());                // standalone — HSTS is too important to aggregate
@@ -66,9 +83,23 @@ public final class AnalysisEngine {
         list.add(new HtmlCommentsCheck());
         list.add(new FormSecurityCheck());
         list.add(new CacheControlCheck());
+        list.add(new MixedContentCheck());
+        list.add(new SubresourceIntegrityCheck());
+        list.add(new OpenRedirectParamCheck());
+        list.add(new LeakInspectorCheck());
+        list.add(new JwtAnalysisCheck());         // decode JWTs already in the exchange
+        list.add(new ReflectedParameterCheck());  // request inputs echoed in the response (XSS lead)
+        list.add(new SerializedObjectCheck());    // Java/PHP/.NET serialized-object markers
+        list.add(new PassiveCorsCheck());         // CORS headers on the seed response
+        list.add(new CookieScopeCheck());         // broad cookie Domain / session-id-in-URL
+        list.add(new ContentTypeCheck());         // Content-Type / charset hygiene
+
+        // Borderline-active — fetches resources the seed page already references.
         list.add(new RobotsSitemapCheck());
         list.add(new JavaScriptGrepCheck());
-        // Active - additional traffic
+        list.add(new LinkExtractionCheck());      // recursive HTML + JS link crawl
+
+        // Active — extra HTTP traffic.
         list.add(new HostHeaderCheck());
         list.add(new CorsCheck());
         list.add(new HttpMethodsCheck());
@@ -76,7 +107,14 @@ public final class AnalysisEngine {
         list.add(new IndexPageProbeCheck());      // common index files → stack hints
         list.add(new ErrorPageFingerprintCheck()); // forced 404 → framework fingerprint
         list.add(new SensitivePathsCheck());
-        // TLS - connects directly to host:443 with the local JDK
+        list.add(new BackupFilesCheck());         // backup / editor / OS cruft
+        list.add(new AdminPanelCheck());          // admin / management interfaces
+        list.add(new ApiDiscoveryCheck());        // Swagger/OpenAPI/GraphQL/etc.
+        list.add(new WellKnownProbesCheck());     // /.well-known/ descriptors
+        list.add(new HttpsRedirectCheck());       // http:// → https:// forced-redirect probe
+        list.add(new DirectoryListingCheck());    // auto-index on the seed directory
+
+        // TLS — connects directly to host:443 with the local JDK
         list.add(new TlsCheck());
         return list;
     }
@@ -116,10 +154,15 @@ public final class AnalysisEngine {
         // so they don't land in a UI table the user just cleared.
         AtomicBoolean done = new AtomicBoolean(false);
 
+        // One response cache shared by every check in this run, so resources referenced by more
+        // than one check (e.g. the same linked JS pulled by js-grep and link-extract) are fetched once.
+        java.util.concurrent.ConcurrentHashMap<String, CompletableFuture<HttpResponse>> responseCache =
+                new java.util.concurrent.ConcurrentHashMap<>();
+
         List<CompletableFuture<Void>> futures = new ArrayList<>();
         try {
             for (Check check : selected) {
-                AnalysisContext ctx = new AnalysisContext(api, seedRequest, seedResponse, check.id(), trafficLog);
+                AnalysisContext ctx = new AnalysisContext(api, seedRequest, seedResponse, check.id(), trafficLog, responseCache);
                 CompletableFuture<Void> f = CompletableFuture.runAsync(() -> {
                     try {
                         api.logging().logToOutput("[analyze-target] running check: " + check.id());

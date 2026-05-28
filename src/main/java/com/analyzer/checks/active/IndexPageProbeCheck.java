@@ -81,6 +81,11 @@ public class IndexPageProbeCheck implements Check {
             return out;
         }
 
+        // Snapshot the seed body length so we can spot SPA catch-all 200s (the same index.html for
+        // every URL). Without this filter every probed path looks like a "hit" on a modern SPA.
+        int seedLen = ctx.seedResponse() == null || ctx.seedResponse().body() == null
+                ? -1 : ctx.seedResponse().body().length();
+
         List<String> hits = new ArrayList<>();
         HttpRequest firstReq = null;
         HttpResponse firstResp = null;
@@ -93,16 +98,23 @@ public class IndexPageProbeCheck implements Check {
                 HttpResponse resp = ctx.sendRequest(req);
                 if (resp == null) continue;
                 int sc = resp.statusCode();
-                // Treat 200, 301, 302 as "exists". 403 means the file is there but access-denied —
-                // also a useful signal. 404 / 410 = not present.
-                if (sc == 200 || sc == 301 || sc == 302 || sc == 403) {
-                    int bodyLen = resp.body() == null ? 0 : resp.body().length();
-                    hits.add(String.format("%s  →  HTTP %d, %d bytes  [%s]",
-                            probe.getKey(), sc, bodyLen, probe.getValue()));
-                    if (firstReq == null) {
-                        firstReq = req;
-                        firstResp = resp;
-                    }
+                // 200 means the file is served directly (the only signal we trust). 403 means it's
+                // there but access-denied — also a useful stack signal. 3xx are noise on modern apps
+                // (router redirects to /login) and previously produced large false-positive counts.
+                if (!(sc == 200 || sc == 403)) continue;
+
+                int bodyLen = resp.body() == null ? 0 : resp.body().length();
+                // Reject SPA catch-alls: if the 200 has the same body size as the seed (±5 %), it's
+                // almost certainly the router returning index.html.
+                if (sc == 200 && seedLen > 0 && Math.abs(bodyLen - seedLen) < Math.max(50, seedLen / 20)) {
+                    continue;
+                }
+
+                hits.add(String.format("%s  →  HTTP %d, %d bytes  [%s]",
+                        probe.getKey(), sc, bodyLen, probe.getValue()));
+                if (firstReq == null) {
+                    firstReq = req;
+                    firstResp = resp;
                 }
             } catch (Exception e) {
                 ctx.api().logging().logToError("[analyze-target] index-probe failed (" + url + "): " + e);

@@ -30,7 +30,7 @@ You'll need Java 17. The Gradle setup uses the foojay toolchain resolver, so if 
 gradle shadowJar
 ```
 
-The loadable JAR ends up in `build/libs/analyze-target-0.5.0.jar`.
+The loadable JAR ends up in `build/libs/analyze-target-0.6.0.jar`.
 
 Load it in Burp via **Extensions → Installed → Add → Java**, point at the JAR, click Next. You'll see `[analyze-target] ready` in the Output log if it loaded cleanly.
 
@@ -82,13 +82,30 @@ Without going through the long list (browse `checks/` for the full set), the cat
 - HTTP methods — full verb enumeration (HEAD/POST/PUT/DELETE/PATCH/CONNECT plus an unknown method), OPTIONS allow-list, TRACE / Cross-Site-Tracing, X-HTTP-Method-Override smuggling
 - Cross-domain policy — crossdomain.xml / clientaccesspolicy.xml permissiveness
 - Sensitive paths — ~30 curated probes (.git, .env, .DS_Store, web.config, Spring Actuator, Tomcat Manager, backup archives, etc.)
+- Backup / leftover files — editor backups (`*.bak`, `*~`, `*.old`, `*.swp`), VCS metadata directories (`.svn/`, `.hg/`, `.bzr/`, `CVS/`), OS cruft (`.DS_Store`, `Thumbs.db`), DB dumps (`dump.sql`, `backup.sql`), framework configs (`wp-config.php.bak`, `local_settings.py`), and the worst-case `.ssh/id_rsa`
+- Admin interfaces — `/admin`, `/wp-admin`, `/administrator`, `/phpmyadmin`, `/adminer`, `/manager/html`, `/jenkins`, `/actuator/*`, `/trace.axd`, `/elmah.axd`, `/server-status`, `/sidekiq`, `/rails/info/routes`, and the rest of the WSTG-CONF-05 catalogue
+- API surface discovery — `/swagger.json`, `/openapi.json`, `/v3/api-docs`, `/swagger-ui*`, `/graphql`, `/graphiql`, `/playground`, ReDoc, Postman/RAML descriptors (feeds Summary suggestions for OpenAPI / GraphQL targets)
+- Well-known descriptors — `/.well-known/security.txt`, OpenID Connect discovery, OAuth 2.0 AS metadata, JWKS, assetlinks.json, apple-app-site-association, host-meta, webfinger, etc.
+- Link & path inventory — crawls the HTML for `href`/`src`/`action`/`data-*`, recursively fetches each referenced JS file, and inventories every same-origin path it sees (aligned with WSTG-INFO-04 and WSTG-INFO-07). Third-party hosts get bucketed separately as a CSP signal
+- Mixed content — HTTPS pages referencing plaintext `http://` resources (WSTG-CRYP-03)
+- Subresource Integrity — cross-origin `<script>` / `<link rel="stylesheet">` without `integrity=`
+- Open-redirect parameter candidates — passive flag of parameter / form-input names that match common redirect conventions (`return`, `redirect_uri`, `next`, `url`, `dest`, …) — WSTG-CLNT-04
+- Information leak grep — emails, RFC 1918 IPs, and internal/staging hostnames in the response body
+- JWT / tokens — decodes JSON Web Tokens already present in the exchange (Bearer header, request `Cookie`, response `Set-Cookie`) and flags `alg=none`, HMAC signing, missing/expired `exp`, and sensitive claims exposed in the (readable) payload — WSTG-SESS-10
+- Input reflection — request parameter values echoed verbatim in the response body, flagged as reflected-XSS / HTML-injection leads (passive; confirm context manually) — WSTG-INPV-01
+- Insecure deserialization markers — Java serialized streams (`rO0AB…` / raw `0xACED`), ASP.NET `__VIEWSTATE`, and PHP serialized data in cookies, parameters, or the body — WSTG-INPV-13
+- CORS (passive) — reads `Access-Control-Allow-Origin` / `-Allow-Credentials` on the seed response and flags wildcard-with-credentials, `null`, and origin-reflection (complements the active CORS probe)
+- Cookie scope — overly broad `Domain` (shared across all subdomains) and session identifiers carried in the URL (session fixation / Referer leakage), complementing the cookie-flags check
+- Content-Type hygiene — missing Content-Type on a body, text responses with no charset (UTF-7 XSS class), and HTML-looking bodies served under a non-HTML type without `nosniff`
+- HTTPS redirect (active) — one request to the plaintext `http://` origin to confirm it force-redirects to HTTPS, and notes a redirect that ships no HSTS
+- Directory listing (active) — probes the seed resource's directory for an auto-generated index (Apache/nginx/IIS/Python) — WSTG-CONF-03 / forced browsing
 - TLS — protocol versions, weak suites, cert validity/SAN match
 
 If there's a category you'd add, open an issue or send a PR - the bar to entry is low.
 
 ## A few things to know
 
-**Traffic volume.** A full run is roughly 50 requests. The **Passive only** checkbox on the Target tab skips everything noisy if you want to run against production without an engagement scope.
+**Traffic volume.** A full run is roughly 50 requests. Checks share a per-run response cache, so resources referenced by more than one check (e.g. the same linked JavaScript pulled by both the JS-grep and link-extraction crawlers) are fetched only once — fewer requests, faster runs, and a quieter footprint. The **Passive only** checkbox on the Target tab skips everything noisy if you want to run against production without an engagement scope.
 
 **Active probes use a neutral canary.** The host-header and CORS probes inject `pentesting.test` - a reserved-TLD name (RFC 6761) that can never resolve to a real host. It reads clearly in logs and is less likely to trip aggressive WAFs than an obviously hostile value, while still being unmistakably not the target.
 
@@ -106,7 +123,7 @@ Rough ideas, in no particular order:
 - Burp scope integration for active probes
 - JSON / SARIF / Markdown report formats alongside HTML
 - Diff mode for re-analysis - show new vs resolved findings between runs
-- JWT analysis when `Authorization: Bearer` is present (alg none, weak HMAC, kid injection)
+- JWT analysis — passive decoding (alg=none, weak HMAC, missing exp, sensitive claims) now shipped; still want active `kid` injection and alg-confusion confirmation
 - GraphQL-specific checks (introspection, depth limits, batched query bypass)
 - Burp Collaborator integration for blind SSRF / out-of-band probes
 - Authenticated vs unauthenticated differential - same probes both ways, flag the diff
