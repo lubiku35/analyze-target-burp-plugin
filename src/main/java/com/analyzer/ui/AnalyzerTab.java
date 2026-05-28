@@ -122,6 +122,10 @@ public class AnalyzerTab extends JPanel {
         JSplitPane split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, tableScroll, detailPanel);
         split.setResizeWeight(0.45);
         split.setDividerLocation(320);
+        // Make the divider thicker so the resize-cursor target is easy to grab; one-touch arrows give
+        // users a single-click way to collapse either pane.
+        split.setDividerSize(8);
+        split.setOneTouchExpandable(true);
         split.setBorder(BorderFactory.createEmptyBorder(8, 0, 0, 0));
         findingsPane.add(split, BorderLayout.CENTER);
 
@@ -221,35 +225,105 @@ public class AnalyzerTab extends JPanel {
     }
 
     private JPanel buildAboutPanel() {
-        JPanel p = new JPanel();
-        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
-        p.setBorder(BorderFactory.createEmptyBorder(24, 32, 24, 32));
-        p.setBackground(palette.panelBackground);
+        JPanel wrapper = new JPanel(new BorderLayout());
+        wrapper.setBackground(palette.background);
+        wrapper.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
 
-        JLabel title = new JLabel("Analyze Target");
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 18f));
-        title.setForeground(palette.accent);
-        p.add(title);
-        p.add(Box.createVerticalStrut(8));
-        p.add(line("Burp Suite extension for one-click reconnaissance and reporting.", palette.mutedForeground));
-        p.add(Box.createVerticalStrut(16));
-        p.add(line("How to use:", palette.foreground));
-        p.add(line("  1. Right-click a request in Proxy / Repeater / Target → Extensions → Send to Analyze Target.", palette.foreground));
-        p.add(line("  2. Switch to the Target tab to review (and optionally edit) the loaded request.", palette.foreground));
-        p.add(line("  3. Click Run analysis. Findings stream into the Findings tab.", palette.foreground));
-        p.add(line("  4. All plugin-generated traffic shows up under HTTP traffic for review.", palette.foreground));
-        p.add(line("  5. Export HTML report… on the Findings tab saves a client deliverable.", palette.foreground));
-        p.add(Box.createVerticalStrut(16));
-        p.add(line("References: OWASP WSTG, PortSwigger Web Security Academy, OWASP Secure Headers Project.",
-                palette.mutedForeground));
-        return p;
+        javax.swing.JTextPane pane = new javax.swing.JTextPane();
+        pane.setContentType("text/html");
+        pane.setEditable(false);
+        pane.setOpaque(true);
+        pane.setBackground(palette.background);
+        pane.setForeground(palette.foreground);
+        pane.setBorder(BorderFactory.createEmptyBorder(20, 24, 20, 24));
+        // Read-only — keep the default arrow cursor so users don't see an I-beam edge.
+        pane.setCursor(java.awt.Cursor.getDefaultCursor());
+        pane.addHyperlinkListener(e -> {
+            if (e.getEventType() == javax.swing.event.HyperlinkEvent.EventType.ACTIVATED && e.getURL() != null) {
+                try {
+                    if (java.awt.Desktop.isDesktopSupported()) {
+                        java.awt.Desktop.getDesktop().browse(java.net.URI.create(e.getURL().toString()));
+                    }
+                } catch (Exception ex) {
+                    api.logging().logToError("[analyze-target] failed to open link: " + ex);
+                }
+            }
+        });
+
+        String fg     = toHex(palette.foreground);
+        String mut    = toHex(palette.mutedForeground);
+        String acc    = toHex(palette.accent);
+        String bg     = toHex(palette.background);
+        String card   = toHex(palette.panelBackground);
+        String border = toHex(palette.border);
+
+        String html = "<html><head><style>"
+                + "body{font-family:-apple-system,'SF Pro Text','Segoe UI',sans-serif;font-size:13px;"
+                + "color:" + fg + ";background:" + bg + ";margin:0;padding:0;}"
+                + "h1{color:" + acc + ";font-size:22px;margin:0 0 4px 0;}"
+                + "h3{color:" + acc + ";font-size:11px;text-transform:uppercase;letter-spacing:0.6px;"
+                + "margin:0 0 8px 0;font-weight:700;}"
+                + ".tag{color:" + mut + ";font-size:12px;margin-bottom:18px;}"
+                + ".card{background:" + card + ";border:1px solid " + border + ";"
+                + "padding:14px 16px;margin-bottom:12px;}"
+                + ".muted{color:" + mut + ";}"
+                + "a{color:" + acc + ";text-decoration:none;}"
+                + "a:hover{text-decoration:underline;}"
+                + "ol{margin:4px 0 0 18px;padding:0;}"
+                + "li{margin:4px 0;}"
+                + "</style></head><body>"
+                + "<h1>Analyze Target</h1>"
+                + "<div class='tag'>Burp Suite extension for one-click reconnaissance and reporting.</div>"
+
+                + "<div class='card'>"
+                + "<h3>Author</h3>"
+                + "<div><b>lubiku35</b> &nbsp;·&nbsp; "
+                + "<a href='https://github.com/lubiku35'>github.com/lubiku35</a></div>"
+                + "<div class='muted' style='margin-top:6px;'>"
+                + "Plugin hosted at <a href='https://github.com/lubiku35'>github.com/lubiku35</a>. "
+                + "Pull requests and ideas are welcome."
+                + "</div>"
+                + "</div>"
+
+                + "<div class='card'>"
+                + "<h3>How to use</h3>"
+                + "<ol>"
+                + "<li>Right-click a request in Proxy / Repeater / Target → Extensions → "
+                + "<b>Send to Analyze Target</b>.</li>"
+                + "<li>Switch to the <b>Target</b> tab to review (and optionally edit) the loaded "
+                + "request.</li>"
+                + "<li>Click <b>Run analysis</b>. Findings stream into the <b>Findings</b> tab; the "
+                + "<b>Summary</b> tab synthesises everything once the run completes.</li>"
+                + "<li>All plugin-generated traffic shows up under <b>HTTP traffic</b> for review.</li>"
+                + "<li><b>Export HTML report…</b> on the Findings tab saves a client deliverable.</li>"
+                + "</ol>"
+                + "</div>"
+
+                + "<div class='card'>"
+                + "<h3>References</h3>"
+                + "<div>"
+                + "<a href='https://owasp.org/www-project-web-security-testing-guide/'>OWASP Web Security Testing Guide</a> · "
+                + "<a href='https://cheatsheetseries.owasp.org/'>OWASP Cheat Sheet Series</a> · "
+                + "<a href='https://owasp.org/www-project-secure-headers/'>OWASP Secure Headers Project</a> · "
+                + "<a href='https://portswigger.net/web-security'>PortSwigger Web Security Academy</a>"
+                + "</div>"
+                + "</div>"
+
+                + "</body></html>";
+        pane.setText(html);
+        pane.setCaretPosition(0);
+
+        javax.swing.JScrollPane scroll = new javax.swing.JScrollPane(pane,
+                javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
+                javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        scroll.setBorder(BorderFactory.createEmptyBorder());
+        scroll.getViewport().setBackground(palette.background);
+        wrapper.add(scroll, BorderLayout.CENTER);
+        return wrapper;
     }
 
-    private JLabel line(String text, java.awt.Color color) {
-        JLabel l = new JLabel(text);
-        l.setForeground(color);
-        l.setAlignmentX(LEFT_ALIGNMENT);
-        return l;
+    private static String toHex(java.awt.Color c) {
+        return String.format("#%02x%02x%02x", c.getRed(), c.getGreen(), c.getBlue());
     }
 
     // ============================================================================================
@@ -281,6 +355,11 @@ public class AnalyzerTab extends JPanel {
     private void startAnalysis(HttpRequest req, HttpResponse resp) {
         boolean passiveOnly = targetPanel.isPassiveOnly();
         this.currentTargetRequest = req;
+        // Fresh run: clear prior results (including any findings restored from the saved project)
+        // so re-running — or running after a restore — never stacks duplicates on top of the last run.
+        model.clear();
+        detailPanel.showFinding(null);
+        summaryPanel.clear();
         setStatus("Analyzing " + req.url() + (passiveOnly ? " (passive only)" : "") + " - running checks…");
         // Auto-switch to Findings so the user sees results coming in.
         SwingUtilities.invokeLater(() -> {

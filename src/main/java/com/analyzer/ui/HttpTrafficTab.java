@@ -90,6 +90,8 @@ public class HttpTrafficTab extends JPanel {
         JSplitPane split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, new JScrollPane(table), detailTabs);
         split.setResizeWeight(0.55);
         split.setDividerLocation(320);
+        split.setDividerSize(8);
+        split.setOneTouchExpandable(true);
         split.setBorder(BorderFactory.createEmptyBorder());
 
         // Toolbar with Clear button for the traffic log (independent from Findings clear)

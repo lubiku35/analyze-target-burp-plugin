@@ -66,6 +66,7 @@ public class TargetPanel extends JPanel {
         JSplitPane split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, buildHeader(), editorTabs);
         split.setResizeWeight(0.0);
         split.setDividerLocation(80);
+        split.setDividerSize(8);
         split.setBorder(BorderFactory.createEmptyBorder());
 
         add(split, BorderLayout.CENTER);

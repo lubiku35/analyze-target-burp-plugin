@@ -27,8 +27,12 @@ import java.net.URI;
 
 /**
  * Right-hand pane on the Findings tab. Shows the selected finding's metadata, description,
- * remediation, evidence, and the raw request/response - using Burp's native editors when
+ * remediation, evidence, and the raw request/response — using Burp's native editors when
  * available, falling back to plain text otherwise.
+ *
+ * Backgrounds are taken from {@link Palette} which itself borrows from Burp's L&amp;F via
+ * {@code UIManager}, so the detail tabs blend with the rest of Burp instead of carrying any
+ * blue accent of their own.
  */
 public class FindingDetailPanel extends JPanel {
     private final MontoyaApi api;
@@ -47,10 +51,10 @@ public class FindingDetailPanel extends JPanel {
         super(new BorderLayout(8, 8));
         this.api = api;
         this.palette = palette;
-        setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
-        setBackground(palette.panelBackground);
+        setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        setBackground(palette.background);
 
-        // Header
+        // Header --------------------------------------------------------------
         JPanel header = new JPanel(new GridBagLayout());
         header.setOpaque(false);
         GridBagConstraints c = new GridBagConstraints();
@@ -65,7 +69,7 @@ public class FindingDetailPanel extends JPanel {
         header.add(metaLabel, c);
         add(header, BorderLayout.NORTH);
 
-        // Tabs
+        // Tabs ----------------------------------------------------------------
         styleTextPane(descriptionPane);
         styleTextPane(remediationPane);
         descriptionPane.setContentType("text/plain");
@@ -76,6 +80,9 @@ public class FindingDetailPanel extends JPanel {
         evidenceArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
         evidenceArea.setBackground(palette.panelBackground);
         evidenceArea.setForeground(palette.foreground);
+        evidenceArea.setBorder(BorderFactory.createEmptyBorder(8, 10, 8, 10));
+        // Keep arrow cursor in evidence pane too — text selection still works.
+        evidenceArea.setCursor(java.awt.Cursor.getDefaultCursor());
 
         styleTextPane(referencesPane);
         referencesPane.setContentType("text/html");
@@ -110,16 +117,22 @@ public class FindingDetailPanel extends JPanel {
 
     private void styleTextPane(JTextPane p) {
         p.setEditable(false);
+        p.setOpaque(true);
         p.setBackground(palette.panelBackground);
         p.setForeground(palette.foreground);
-        p.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+        p.setBorder(BorderFactory.createEmptyBorder(10, 12, 10, 12));
+        p.setFont(p.getFont().deriveFont(13f));
+        // Read-only — keep the default arrow cursor so the pane edges don't look draggable.
+        p.setCursor(java.awt.Cursor.getDefaultCursor());
     }
 
-    private static JScrollPane wrapScroll(java.awt.Component c) {
+    private JScrollPane wrapScroll(java.awt.Component c) {
         JScrollPane sp = new JScrollPane(c,
                 ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
                 ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         sp.setBorder(BorderFactory.createEmptyBorder());
+        sp.getViewport().setBackground(palette.panelBackground);
+        sp.setBackground(palette.panelBackground);
         sp.setPreferredSize(new Dimension(400, 200));
         return sp;
     }
@@ -133,7 +146,7 @@ public class FindingDetailPanel extends JPanel {
             evidenceArea.setText("");
             requestEditor.setRequest(null);
             responseEditor.setResponse(null);
-            referencesPane.setText("");
+            referencesPane.setText(referencesHtml(null));
             return;
         }
         titleLabel.setText(f.title());
@@ -146,61 +159,70 @@ public class FindingDetailPanel extends JPanel {
         evidenceArea.setText(f.evidence());
         evidenceArea.setCaretPosition(0);
 
-        // Prefer the original Montoya HttpRequest/HttpResponse refs - Burp's editor renders them
+        // Prefer the original Montoya HttpRequest/HttpResponse refs — Burp's editor renders them
         // in full, with proper highlighting and parser awareness. Only fall back to re-parsing the
         // textual snippet when the finding didn't attach the live objects.
         if (f.httpRequest() != null) {
-            try {
-                requestEditor.setRequest(f.httpRequest());
-            } catch (Exception ignored) {
-                requestEditor.setRequest(null);
-            }
+            try { requestEditor.setRequest(f.httpRequest()); }
+            catch (Exception ignored) { requestEditor.setRequest(null); }
         } else if (!f.requestSnippet().isEmpty()) {
             try {
                 requestEditor.setRequest(burp.api.montoya.http.message.requests.HttpRequest
                         .httpRequest(ByteArray.byteArray(f.requestSnippet())));
-            } catch (Exception ignored) {
-                requestEditor.setRequest(null);
-            }
+            } catch (Exception ignored) { requestEditor.setRequest(null); }
         } else {
             requestEditor.setRequest(null);
         }
 
         if (f.httpResponse() != null) {
-            try {
-                responseEditor.setResponse(f.httpResponse());
-            } catch (Exception ignored) {
-                responseEditor.setResponse(null);
-            }
+            try { responseEditor.setResponse(f.httpResponse()); }
+            catch (Exception ignored) { responseEditor.setResponse(null); }
         } else if (!f.responseSnippet().isEmpty()) {
             try {
                 responseEditor.setResponse(burp.api.montoya.http.message.responses.HttpResponse
                         .httpResponse(ByteArray.byteArray(f.responseSnippet())));
-            } catch (Exception ignored) {
-                responseEditor.setResponse(null);
-            }
+            } catch (Exception ignored) { responseEditor.setResponse(null); }
         } else {
             responseEditor.setResponse(null);
         }
 
-        StringBuilder refs = new StringBuilder(
-                "<html><head><style>body{font-family:sans-serif;font-size:12px;color:")
-                .append(toHex(palette.foreground)).append(";background:")
-                .append(toHex(palette.panelBackground)).append(";} a{color:")
-                .append(toHex(palette.accent)).append(";}</style></head><body><ul>");
-        if (f.references().isEmpty()) refs.append("<li><em>(no references)</em></li>");
-        for (String r : f.references()) {
-            String safe = safeHttpUrl(r);
-            if (safe != null) {
-                refs.append("<li><a href='").append(escape(safe)).append("'>")
-                        .append(escape(r)).append("</a></li>");
-            } else {
-                refs.append("<li>").append(escape(r)).append("</li>");
-            }
-        }
-        refs.append("</ul></body></html>");
-        referencesPane.setText(refs.toString());
+        referencesPane.setText(referencesHtml(f));
         referencesPane.setCaretPosition(0);
+    }
+
+    /** Theme-aware HTML for the References tab. Uses panel background so it blends with Burp. */
+    private String referencesHtml(Finding f) {
+        String fg     = toHex(palette.foreground);
+        String bg     = toHex(palette.panelBackground);
+        String mut    = toHex(palette.mutedForeground);
+        String acc    = toHex(palette.accent);
+        StringBuilder refs = new StringBuilder(
+                "<html><head><style>"
+                + "body{font-family:-apple-system,'SF Pro Text','Segoe UI',sans-serif;font-size:12.5px;"
+                + "color:" + fg + ";background:" + bg + ";margin:0;padding:10px 12px;}"
+                + "ul{margin:0;padding-left:18px;}"
+                + "li{margin:4px 0;}"
+                + "a{color:" + acc + ";text-decoration:none;}"
+                + "a:hover{text-decoration:underline;}"
+                + ".muted{color:" + mut + ";}"
+                + "</style></head><body>");
+        if (f == null || f.references().isEmpty()) {
+            refs.append("<div class='muted'>(no references)</div>");
+        } else {
+            refs.append("<ul>");
+            for (String r : f.references()) {
+                String safe = safeHttpUrl(r);
+                if (safe != null) {
+                    refs.append("<li><a href='").append(escape(safe)).append("'>")
+                            .append(escape(r)).append("</a></li>");
+                } else {
+                    refs.append("<li>").append(escape(r)).append("</li>");
+                }
+            }
+            refs.append("</ul>");
+        }
+        refs.append("</body></html>");
+        return refs.toString();
     }
 
     private static String toHex(java.awt.Color c) {

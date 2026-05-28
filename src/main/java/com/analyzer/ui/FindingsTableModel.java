@@ -7,11 +7,16 @@ import javax.swing.table.AbstractTableModel;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Findings table model. All mutations and reads must happen on the EDT - addFinding/clear
  * schedule their work via SwingUtilities.invokeLater. Worker threads call addFinding directly.
+ *
+ * <p>Identical findings are de-duplicated by a content signature, so a check that emits the same
+ * finding twice — or a restore that overlaps a fresh run — can never produce duplicate rows.</p>
  */
 public class FindingsTableModel extends AbstractTableModel {
     private static final String[] COLUMNS = {"#", "Time", "Severity", "Confidence", "Category", "Title", "URL"};
@@ -19,17 +24,28 @@ public class FindingsTableModel extends AbstractTableModel {
             DateTimeFormatter.ofPattern("HH:mm:ss").withZone(ZoneId.systemDefault());
 
     private final List<Finding> rows = new ArrayList<>();
+    private final Set<String> signatures = new HashSet<>();
 
     public void addFinding(Finding f) {
+        if (f == null) return;
         SwingUtilities.invokeLater(() -> {
+            if (!signatures.add(signature(f))) return; // exact duplicate — skip
             rows.add(f);
             int idx = rows.size() - 1;
             fireTableRowsInserted(idx, idx);
         });
     }
 
+    /** Content signature used to suppress duplicate rows. Findings that differ in any displayed
+     *  field or in their evidence remain distinct. */
+    private static String signature(Finding f) {
+        return f.checkId() + "|#|" + f.severity() + "|#|" + f.title()
+                + "|#|" + f.url() + "|#|" + f.evidence();
+    }
+
     public void clear() {
         SwingUtilities.invokeLater(() -> {
+            signatures.clear();
             int size = rows.size();
             if (size == 0) return;
             rows.clear();
