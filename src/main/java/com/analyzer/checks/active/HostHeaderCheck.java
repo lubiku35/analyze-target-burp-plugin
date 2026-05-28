@@ -74,7 +74,7 @@ public class HostHeaderCheck implements Check {
             else if (setCookie != null && setCookie.contains(CANARY)) where = "Set-Cookie";
 
             if (where != null) {
-                Severity sev = location != null && location.contains(CANARY) ? Severity.HIGH : Severity.MEDIUM;
+                Severity sev = location != null && location.contains(CANARY) ? Severity.MEDIUM : Severity.LOW;
                 out.add(Finding.builder()
                         .checkId(ID + ".reflection")
                         .title("Host header injection reflected (" + variant + ") in " + where)

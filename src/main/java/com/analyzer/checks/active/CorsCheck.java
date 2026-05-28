@@ -74,7 +74,7 @@ public class CorsCheck implements Check {
             boolean credentials = acc != null && acc.trim().equalsIgnoreCase("true");
 
             if (reflected) {
-                Severity sev = credentials ? Severity.HIGH : Severity.MEDIUM;
+                Severity sev = credentials ? Severity.MEDIUM : Severity.LOW;
                 out.add(Finding.builder()
                         .checkId(ID + ".reflection")
                         .title("CORS reflects arbitrary Origin (" + variant + ")" + (credentials ? " with credentials" : ""))
@@ -101,7 +101,7 @@ public class CorsCheck implements Check {
                 out.add(Finding.builder()
                         .checkId(ID + ".wildcard-credentials")
                         .title("CORS wildcard with credentials (invalid + dangerous config)")
-                        .severity(Severity.HIGH)
+                        .severity(Severity.MEDIUM)
                         .confidence(Confidence.CERTAIN)
                         .url(ctx.targetUrl())
                         .description("Server returns `Access-Control-Allow-Origin: *` together with `Access-Control-Allow-Credentials: true`. "

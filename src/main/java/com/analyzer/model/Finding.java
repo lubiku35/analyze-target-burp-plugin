@@ -37,8 +37,16 @@ public final class Finding {
     private Finding(Builder b) {
         this.checkId = Objects.requireNonNull(b.checkId, "checkId");
         this.title = Objects.requireNonNull(b.title, "title");
-        this.severity = Objects.requireNonNull(b.severity, "severity");
         this.confidence = b.confidence == null ? Confidence.FIRM : b.confidence;
+        // Confidence cap: a TENTATIVE finding is an unconfirmed lead, not a demonstrated issue, so it
+        // can never outrank LOW no matter what severity the check requested. Keeps the table honest —
+        // "possible secret in JS", "reflected parameter", "serialized blob present" are leads to chase,
+        // not HIGH/MEDIUM findings until manually confirmed.
+        Severity requested = Objects.requireNonNull(b.severity, "severity");
+        this.severity = (this.confidence == Confidence.TENTATIVE
+                && requested.ordinal() < Severity.LOW.ordinal())
+                ? Severity.LOW
+                : requested;
         this.url = b.url == null ? "" : b.url;
         this.description = b.description == null ? "" : b.description;
         this.remediation = b.remediation == null ? "" : b.remediation;

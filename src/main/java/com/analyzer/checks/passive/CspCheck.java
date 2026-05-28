@@ -42,7 +42,7 @@ public class CspCheck implements Check {
             out.add(Finding.builder()
                     .checkId(ID + ".missing")
                     .title("Missing Content-Security-Policy header")
-                    .severity(Severity.MEDIUM)
+                    .severity(Severity.LOW)
                     .confidence(Confidence.CERTAIN)
                     .url(url)
                     .description("The response sets no Content-Security-Policy. CSP is the primary defence-in-depth control "
@@ -96,7 +96,7 @@ public class CspCheck implements Check {
                 .title(reportOnly
                         ? "Content-Security-Policy is report-only and has weaknesses"
                         : "Weak Content-Security-Policy")
-                .severity(reportOnly ? Severity.LOW : Severity.MEDIUM)
+                .severity(reportOnly ? Severity.INFO : Severity.LOW)
                 .confidence(Confidence.FIRM)
                 .url(url)
                 .description("CSP " + (reportOnly ? "(report-only) " : "") + "is present but has the following issues:\n  - "

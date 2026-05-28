@@ -76,14 +76,30 @@ public class FormSecurityCheck implements Check {
                 out.add(Finding.builder()
                         .checkId(ID + ".password-over-http")
                         .title("Login form on HTTPS page posts password over HTTP")
-                        .severity(Severity.HIGH)
+                        .severity(Severity.MEDIUM)
                         .confidence(Confidence.CERTAIN)
                         .url(ctx.targetUrl())
-                        .description("Form #" + formIndex + " contains a password input but `action` is http://. "
-                                + "The credential will travel in plaintext, defeating the HTTPS that loaded the page.")
-                        .remediation("Set `action` to a same-origin HTTPS URL. Browsers may auto-upgrade with mixed-content "
-                                + "blocking, but never rely on it.")
+                        .description(
+                                "Form #" + formIndex + " contains a password input but its `action` URL is "
+                              + "plaintext HTTP. The credential will travel unencrypted to the action "
+                              + "endpoint, defeating the HTTPS that protected the form load. Any on-path "
+                              + "attacker (open Wi-Fi, malicious proxy, hostile ISP) can read or modify "
+                              + "the submission. Most browsers now auto-block this submission with a "
+                              + "mixed-content warning, but the underlying misconfiguration is still a "
+                              + "credential disclosure path waiting to happen.\n\n"
+                              + "Aligned with OWASP WSTG-CRYP-03 (Testing for Sensitive Information Sent "
+                              + "via Unencrypted Channels) and the OWASP Transport Layer Security Cheat "
+                              + "Sheet.")
+                        .remediation(
+                                "Change the form's `action` to a same-origin HTTPS URL. Ideally, also add "
+                              + "Strict-Transport-Security with `includeSubDomains; preload` and set "
+                              + "Content-Security-Policy `upgrade-insecure-requests` so legacy http:// "
+                              + "references get promoted automatically.")
                         .evidence("<form " + HttpUtil.truncate(formAttrs.trim(), 200) + ">")
+                        .references(List.of(
+                                "https://owasp.org/www-project-web-security-testing-guide/v42/4-Web_Application_Security_Testing/09-Testing_for_Weak_Cryptography/03-Testing_for_Sensitive_Information_Sent_via_Unencrypted_Channels",
+                                "https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Security_Cheat_Sheet.html",
+                                "https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html"))
                         .request(ctx.seedRequest())
                         .response(resp)
                         .build());
@@ -127,11 +143,24 @@ public class FormSecurityCheck implements Check {
                                 .severity(Severity.INFO)
                                 .confidence(Confidence.FIRM)
                                 .url(ctx.targetUrl())
-                                .description("A password input has no autocomplete directive. Modern guidance is mixed - managers "
-                                        + "ignore the hint anyway - but on shared/kiosk devices browser-cached passwords are a residual risk.")
-                                .remediation("If the form is on a shared-device portal or sensitive admin login, set "
-                                        + "`autocomplete=\"new-password\"` (signup) or `\"off\"` (other). Otherwise leave it.")
+                                .description(
+                                        "A password input has no autocomplete directive. Modern guidance "
+                                      + "is mixed — password managers ignore the hint and browsers may "
+                                      + "save credentials regardless — but on shared / kiosk devices the "
+                                      + "browser-cached password is a residual risk. Setting "
+                                      + "`autocomplete=\"new-password\"` on signup forms also disables "
+                                      + "the browser's auto-fill behaviour, which can otherwise paste "
+                                      + "the wrong account's password into newly added users.\n\n"
+                                      + "Aligned with the OWASP Authentication Cheat Sheet.")
+                                .remediation(
+                                        "If the form sits on a shared-device portal or sensitive admin "
+                                      + "login, set `autocomplete=\"new-password\"` (signup) or "
+                                      + "`autocomplete=\"off\"` (login). Otherwise the default browser "
+                                      + "behaviour is usually fine.")
                                 .evidence(HttpUtil.truncate(tag, 200))
+                                .references(List.of(
+                                        "https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html",
+                                        "https://developer.mozilla.org/en-US/docs/Web/Security/Practical_implementation_guides/Turning_off_form_autocompletion"))
                                 .request(ctx.seedRequest())
                                 .response(resp)
                                 .build());

@@ -43,7 +43,7 @@ public class HstsCheck implements Check {
             out.add(Finding.builder()
                     .checkId(ID + ".missing")
                     .title("Missing Strict-Transport-Security header")
-                    .severity(Severity.MEDIUM)
+                    .severity(Severity.LOW)
                     .confidence(Confidence.CERTAIN)
                     .url(url)
                     .description("The HTTPS response does not set Strict-Transport-Security. An active network attacker "

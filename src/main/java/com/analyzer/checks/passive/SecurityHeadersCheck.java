@@ -61,7 +61,7 @@ public class SecurityHeadersCheck implements Check {
         boolean cspProtects = csp != null && csp.toLowerCase().contains("frame-ancestors");
         if (xfo == null && !cspProtects) {
             issues.add(new Issue("X-Frame-Options / frame-ancestors",
-                    Severity.MEDIUM,
+                    Severity.LOW,
                     "Neither X-Frame-Options nor CSP `frame-ancestors` is set. Any origin can iframe the page, "
                             + "enabling clickjacking against state-changing endpoints.",
                     "Add `Content-Security-Policy: frame-ancestors 'none'` (or `'self'`). Optionally also "

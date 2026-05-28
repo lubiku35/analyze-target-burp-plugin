@@ -63,7 +63,7 @@ public class CrossDomainPolicyCheck implements Check {
             if (domains.isEmpty()) return;
 
             boolean wildcard = domains.stream().anyMatch(d -> d.equals("*") || d.isEmpty());
-            Severity sev = wildcard ? Severity.MEDIUM : Severity.LOW;
+            Severity sev = wildcard ? Severity.LOW : Severity.INFO;
             out.add(Finding.builder()
                     .checkId(ID + (wildcard ? ".wildcard" : ".present"))
                     .title(label + (wildcard ? " allows ALL domains (*)" : " present"))
