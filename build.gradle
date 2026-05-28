@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'com.analyzer'
-version = '0.5.0'
+version = '0.6.0'
 
 java {
     toolchain {
@@ -19,6 +19,20 @@ repositories {
 dependencies {
     // Burp Montoya API - provided by Burp at runtime, only needed for compilation
     compileOnly 'net.portswigger.burp.extensions:montoya-api:2026.2'
+
+    // Tests. The Montoya API isn't on the runtime classpath in Burp, but the unit tests need its
+    // types to compile and to mock, so it's a test dependency here as well.
+    testImplementation 'net.portswigger.burp.extensions:montoya-api:2026.2'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testImplementation 'org.mockito:mockito-core:5.11.0'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+test {
+    useJUnitPlatform()
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+    }
 }
 
 shadowJar {

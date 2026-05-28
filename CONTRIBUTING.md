@@ -24,6 +24,17 @@ Requirements:
 - JDK 17 (Gradle will auto-download via the foojay toolchain resolver if you don't have it).
 - Burp Suite Community or Pro for manual testing - load the JAR via Extensions → Add → Java.
 
+### Running the tests
+
+```sh
+gradle test       # JUnit 5 + Mockito; report at build/reports/tests/test/index.html
+```
+
+Unit tests live under `src/test/java`. They mock Burp's Montoya request/response types via the
+`com.analyzer.testutil.TestHttp` helper (the Montoya static factories only work inside a running
+Burp, so tests can't construct real instances). When you add or change a check, add a test that
+pins its key findings and severities - several existing checks have examples to copy.
+
 ## Adding a check - the 60-second version
 
 1. Create a class under `checks/passive/`, `checks/active/`, or `checks/tls/` that implements `Check`.
