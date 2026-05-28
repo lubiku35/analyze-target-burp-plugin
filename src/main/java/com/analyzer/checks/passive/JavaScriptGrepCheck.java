@@ -99,7 +99,7 @@ public class JavaScriptGrepCheck implements Check {
             if (Thread.currentThread().isInterrupted()) break;
             try {
                 HttpRequest jsReq = HttpRequest.httpRequestFromUrl(jsUrl);
-                HttpResponse jsResp = ctx.sendRequest(jsReq);
+                HttpResponse jsResp = ctx.cachedGet(jsReq); // shared with link-extract — fetch each JS once
                 if (jsResp == null || jsResp.statusCode() >= 400) continue;
                 String jsBody = jsResp.bodyToString();
                 if (jsBody == null || jsBody.isEmpty()) continue;
